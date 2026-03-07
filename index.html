@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Insights Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="header-brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" fill="currentColor" opacity="0.9"/>
+          <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#0a0a0a"/>
+        </svg>
+        <span class="header-title">YouTube <span class="gradient-text">Insights</span></span>
+      </div>
+      <div class="header-meta">
+        <span class="header-last-update" id="last-update">Cargando...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- SECTION: Channel Overview -->
+    <section class="seccion-oscura">
+      <div class="container">
+
+        <!-- Section title + date filter -->
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Visión General del Canal</h2>
+            <p class="section-subtitle">Seguimiento acumulado de crecimiento · <span class="subtitle-note">snapshots ~3:00 AM, fechas reflejan el día anterior</span></p>
+          </div>
+          <div class="date-filter">
+            <div class="date-preset-group">
+              <button class="btn-preset btn-sm" id="btn-preset-7"  data-days="7">7D</button>
+              <button class="btn-preset btn-sm" id="btn-preset-14" data-days="14">14D</button>
+              <button class="btn-preset btn-sm" id="btn-preset-30" data-days="30">30D</button>
+            </div>
+            <span class="date-range-badge" id="date-range-days"></span>
+            <div class="date-input-group">
+              <label for="date-from">Desde</label>
+              <input type="date" id="date-from" />
+            </div>
+            <span class="date-separator">→</span>
+            <div class="date-input-group">
+              <label for="date-to">Hasta</label>
+              <input type="date" id="date-to" />
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpi-grid">
+          <!-- Skeleton -->
+          <div class="kpi-card skeleton-card">
+            <div class="skeleton skeleton-label"></div>
+            <div class="skeleton skeleton-value"></div>
+            <div class="skeleton skeleton-delta"></div>
+          </div>
+          <div class="kpi-card skeleton-card">
+            <div class="skeleton skeleton-label"></div>
+            <div class="skeleton skeleton-value"></div>
+            <div class="skeleton skeleton-delta"></div>
+          </div>
+          <div class="kpi-card skeleton-card">
+            <div class="skeleton skeleton-label"></div>
+            <div class="skeleton skeleton-value"></div>
+            <div class="skeleton skeleton-delta"></div>
+          </div>
+          <div class="kpi-card skeleton-card">
+            <div class="skeleton skeleton-label"></div>
+            <div class="skeleton skeleton-value"></div>
+            <div class="skeleton skeleton-delta"></div>
+          </div>
+        </div>
+
+        <!-- Charts grid -->
+        <div class="charts-grid">
+          <div class="card chart-card chart-card--wide">
+            <div class="chart-card-header">
+              <span class="chart-title">Crecimiento Acumulado</span>
+              <div class="chart-legend" id="legend-growth">
+                <span class="legend-item"><span class="legend-dot legend-dot--blue"></span>Vistas</span>
+                <span class="legend-item"><span class="legend-dot legend-dot--purple"></span>Suscriptores</span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="chart-growth"></canvas>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <span class="chart-title">Nuevas Vistas por Día</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="chart-daily-views"></canvas>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <div class="chart-card-header">
+              <span class="chart-title">Tasa de Crecimiento de Vistas (%)</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="chart-growth-rate"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION: Weekly Playlists & Videos -->
+    <section class="seccion-media" id="section-weekly">
+      <div class="container">
+
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Playlists & Videos · <span class="gradient-text">Última Semana</span></h2>
+            <p class="section-subtitle" id="weekly-subtitle">Cargando...</p>
+          </div>
+        </div>
+
+        <!-- Chart: vistas ganadas por playlist -->
+        <div class="card chart-card chart-card--wide" style="margin-bottom:16px;">
+          <div class="chart-card-header">
+            <span class="chart-title">Vistas Ganadas por Playlist · Top 5</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-weekly-views"></canvas>
+          </div>
+        </div>
+
+        <!-- Playlist ranking -->
+        <div class="playlist-ranking-list" id="playlist-cards">
+          <div class="pl-row skeleton-card" style="height:72px;"><div class="skeleton" style="width:72px;height:40px;border-radius:6px;flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;"><div class="skeleton skeleton-label" style="width:55%;"></div><div class="skeleton" style="height:4px;width:100%;border-radius:2px;"></div><div class="skeleton skeleton-delta" style="width:40%;"></div></div></div>
+          <div class="pl-row skeleton-card" style="height:72px;"><div class="skeleton" style="width:72px;height:40px;border-radius:6px;flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;"><div class="skeleton skeleton-label" style="width:55%;"></div><div class="skeleton" style="height:4px;width:100%;border-radius:2px;"></div><div class="skeleton skeleton-delta" style="width:40%;"></div></div></div>
+          <div class="pl-row skeleton-card" style="height:72px;"><div class="skeleton" style="width:72px;height:40px;border-radius:6px;flex-shrink:0;"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;"><div class="skeleton skeleton-label" style="width:55%;"></div><div class="skeleton" style="height:4px;width:100%;border-radius:2px;"></div><div class="skeleton skeleton-delta" style="width:40%;"></div></div></div>
+        </div>
+
+
+        <!-- Chart: vistas ganadas por video -->
+        <div class="card chart-card chart-card--wide" style="margin-top:16px;">
+          <div class="chart-card-header">
+            <span class="chart-title">Vistas Ganadas por Video · Top 5</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-weekly-video-views"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span class="footer-text">Angel García · YouTube Insights Dashboard</span>
+      <span class="footer-text" id="footer-range"></span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
