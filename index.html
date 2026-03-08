@@ -14,11 +14,14 @@
   <header class="site-header">
     <div class="container header-inner">
       <div class="header-brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" fill="currentColor" opacity="0.9"/>
-          <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#0a0a0a"/>
-        </svg>
-        <span class="header-title">YouTube <span class="gradient-text">Insights</span></span>
+        <span class="header-brand-parent">angelgarciadatablog</span>
+        <div class="header-brand-main">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" fill="currentColor" opacity="0.9"/>
+            <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#0a0a0a"/>
+          </svg>
+          <span class="header-title">YouTube <span class="gradient-text">Insights</span></span>
+        </div>
       </div>
       <div class="header-meta">
         <span class="header-last-update" id="last-update">Cargando...</span>
@@ -40,20 +43,22 @@
             <p class="section-subtitle">Seguimiento acumulado de crecimiento · <span class="subtitle-note">snapshots ~3:00 AM, fechas reflejan el día anterior</span></p>
           </div>
           <div class="date-filter">
+            <div class="date-inputs-row">
+              <span class="date-range-badge" id="date-range-days"></span>
+              <div class="date-input-group">
+                <label for="date-from">Desde</label>
+                <input type="date" id="date-from" />
+              </div>
+              <span class="date-separator">→</span>
+              <div class="date-input-group">
+                <label for="date-to">Hasta</label>
+                <input type="date" id="date-to" />
+              </div>
+            </div>
             <div class="date-preset-group">
               <button class="btn-preset btn-sm" id="btn-preset-7"  data-days="7">7D</button>
               <button class="btn-preset btn-sm" id="btn-preset-14" data-days="14">14D</button>
               <button class="btn-preset btn-sm" id="btn-preset-30" data-days="30">30D</button>
-            </div>
-            <span class="date-range-badge" id="date-range-days"></span>
-            <div class="date-input-group">
-              <label for="date-from">Desde</label>
-              <input type="date" id="date-from" />
-            </div>
-            <span class="date-separator">→</span>
-            <div class="date-input-group">
-              <label for="date-to">Hasta</label>
-              <input type="date" id="date-to" />
             </div>
           </div>
         </div>
@@ -129,12 +134,18 @@
             <h2 class="section-title">Playlists & Videos · <span class="gradient-text">Última Semana</span></h2>
             <p class="section-subtitle" id="weekly-subtitle">Cargando...</p>
           </div>
+          <div class="metric-toggle" id="weekly-metric-toggle">
+            <button class="btn-metric btn-metric--active" data-metric="views">Vistas</button>
+            <button class="btn-metric" data-metric="likes">Likes</button>
+            <button class="btn-metric" data-metric="comments">Comentarios</button>
+            <button class="btn-metric" data-metric="age">Antigüedad</button>
+          </div>
         </div>
 
         <!-- Chart: vistas ganadas por playlist -->
         <div class="card chart-card chart-card--wide" style="margin-bottom:16px;">
           <div class="chart-card-header">
-            <span class="chart-title">Vistas Ganadas por Playlist · Top 5</span>
+            <span class="chart-title" id="chart-title-playlist">Vistas Ganadas por Playlist · Top 5</span>
           </div>
           <div class="chart-wrapper">
             <canvas id="chart-weekly-views"></canvas>
@@ -152,10 +163,64 @@
         <!-- Chart: vistas ganadas por video -->
         <div class="card chart-card chart-card--wide" style="margin-top:16px;">
           <div class="chart-card-header">
-            <span class="chart-title">Vistas Ganadas por Video · Top 5</span>
+            <span class="chart-title" id="chart-title-video">Vistas Ganadas por Video · Top 5</span>
           </div>
           <div class="chart-wrapper">
             <canvas id="chart-weekly-video-views"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION: Histórico Semanal -->
+    <section class="seccion-oscura" id="section-historico">
+      <div class="container">
+
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Histórico <span class="gradient-text">Semanal</span></h2>
+            <p class="section-subtitle">Evolución de crecimiento semana a semana</p>
+          </div>
+        </div>
+
+        <!-- Playlists block -->
+        <div class="historico-block">
+          <div class="historico-block-header">
+            <h3 class="historico-block-title">Playlists</h3>
+            <div class="metric-toggle" id="historico-pl-metric-toggle">
+              <button class="btn-metric btn-metric--neutral btn-metric--active" data-metric="views">Vistas</button>
+              <button class="btn-metric btn-metric--neutral" data-metric="likes">Likes</button>
+              <button class="btn-metric btn-metric--neutral" data-metric="comments">Comentarios</button>
+            </div>
+          </div>
+          <div class="card chart-card chart-card--wide">
+            <div class="chart-wrapper chart-wrapper--tall">
+              <canvas id="chart-hist-playlists"></canvas>
+            </div>
+          </div>
+          <div class="historico-table-wrap">
+            <table class="historico-table" id="historico-pl-table"></table>
+          </div>
+        </div>
+
+        <!-- Videos block -->
+        <div class="historico-block">
+          <div class="historico-block-header">
+            <h3 class="historico-block-title">Videos</h3>
+            <div class="metric-toggle" id="historico-vid-metric-toggle">
+              <button class="btn-metric btn-metric--neutral btn-metric--active" data-metric="views">Vistas</button>
+              <button class="btn-metric btn-metric--neutral" data-metric="likes">Likes</button>
+              <button class="btn-metric btn-metric--neutral" data-metric="comments">Comentarios</button>
+            </div>
+          </div>
+          <div class="card chart-card chart-card--wide">
+            <div class="chart-wrapper chart-wrapper--tall">
+              <canvas id="chart-hist-videos"></canvas>
+            </div>
+          </div>
+          <div class="historico-table-wrap">
+            <table class="historico-table" id="historico-vid-table"></table>
           </div>
         </div>
 

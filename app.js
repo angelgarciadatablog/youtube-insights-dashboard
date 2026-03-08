@@ -501,9 +501,8 @@ function updateLastUpdate(data) {
 function updateFooterRange(data) {
   const el = document.getElementById('footer-range');
   if (!el || data.length === 0) return;
-  const from = formatDate(data[0].snapshot_date);
-  const to   = formatDate(data[data.length - 1].snapshot_date);
-  el.textContent = `${from} → ${to}`;
+  const to = formatDate(data[data.length - 1].snapshot_date);
+  el.textContent = `Datos hasta: ${to}`;
 }
 
 function setActivePreset(activeId) {
@@ -535,7 +534,16 @@ const WEEKLY_DATA_URL = 'https://storage.googleapis.com/angelgarciadatablog-anal
 
 const PLAYLIST_COLORS = ['#2674ed','#7c3aed','#ec4899','#10b981','#f59e0b','#06b6d4','#ef4444'];
 
+const PLAYLIST_METRICS = {
+  views:    { key: 'views_gained',                label: 'vistas',       chartLabel: 'Vistas Ganadas' },
+  likes:    { key: 'likes_gained',                label: 'likes',        chartLabel: 'Likes Ganados' },
+  comments: { key: 'comments_gained',             label: 'comentarios',  chartLabel: 'Comentarios Ganados' },
+  age:      { key: 'days_since_playlist_created', videoKey: 'days_since_published', label: 'días', chartLabel: 'Playlists más Antiguas', videoChartLabel: 'Videos más Antiguos' },
+};
+
+let currentPlaylistMetric = 'views';
 let weeklyAllData         = [];
+let currentWeeklyPlaylists = [];
 let currentWeeklyVideos   = [];
 let chartWeeklyViews      = null;
 let chartWeeklyVideoViews = null;
@@ -549,6 +557,7 @@ async function initWeekly() {
     const latestSnapshot = weeklyAllData[weeklyAllData.length - 1].snapshot_date.slice(0, 10);
     const filtered = weeklyAllData.filter(d => d.snapshot_date.slice(0, 10) === latestSnapshot);
     renderWeekly(filtered, latestSnapshot);
+    initMetricToggle();
   } catch (err) {
     console.error('Error loading weekly data:', err);
   }
@@ -556,7 +565,8 @@ async function initWeekly() {
 
 function renderWeekly(data, snapshotDate) {
   const { playlists, videos } = aggregateWeeklyData(data);
-  currentWeeklyVideos = videos;
+  currentWeeklyPlaylists = playlists;
+  currentWeeklyVideos    = videos;
 
   // Update subtitle with snapshot date
   const subtitleEl = document.getElementById('weekly-subtitle');
@@ -566,9 +576,13 @@ function renderWeekly(data, snapshotDate) {
     subtitleEl.innerHTML = `Snapshot del <span class="subtitle-note">${formatted}</span>`;
   }
 
-  renderPlaylistCards(playlists);
-  renderWeeklyChart(playlists);
-  renderWeeklyVideoChart(videos);
+  renderByMetric(currentPlaylistMetric);
+}
+
+function renderByMetric(metric) {
+  renderPlaylistCards(currentWeeklyPlaylists, metric);
+  renderWeeklyChart(currentWeeklyPlaylists, metric);
+  renderWeeklyVideoChart(currentWeeklyVideos, metric);
 }
 
 // ---- Aggregation ----
@@ -586,8 +600,9 @@ function aggregateWeeklyData(data) {
       playlistAgg[pid] = {
         id: pid, title: d.playlist_title,
         thumbnail: d.playlist_thumbnail_url, url: d.playlist_url,
-        views_gained: 0, likes_gained: 0, engagement: 0,
-        total_views: 0, like_rate: 0, active_pct: 0, video_count: 0,
+        views_gained: 0, likes_gained: 0, comments_gained: 0, engagement: 0,
+        total_views: 0, total_likes: 0, like_rate: 0, active_pct: 0, video_count: 0,
+        days_since_playlist_created: 0,
         bySnapshot: {},
       };
     }
@@ -595,11 +610,14 @@ function aggregateWeeklyData(data) {
       plSnapshotSeen.add(snapKey);
       const p = playlistAgg[pid];
       const wv = d.playlist_total_views_gained || 0;
-      p.views_gained += wv;
-      p.likes_gained += d.playlist_total_likes_gained || 0;
-      p.engagement   += d.playlist_total_engagement_score || 0;
+      p.views_gained    += wv;
+      p.likes_gained    += d.playlist_total_likes_gained    || 0;
+      p.comments_gained += d.playlist_total_comments_gained || 0;
+      p.engagement      += d.playlist_total_engagement_score || 0;
+      p.days_since_playlist_created = Math.max(p.days_since_playlist_created, d.days_since_playlist_created || 0);
       if ((d.total_playlist_views || 0) > p.total_views) {
         p.total_views  = d.total_playlist_views || 0;
+        p.total_likes  = d.total_playlist_likes || 0;
         p.like_rate    = d.playlist_like_rate_pct || 0;
         p.active_pct   = d.playlist_active_video_pct || 0;
         p.video_count  = d.playlist_video_count || 0;
@@ -620,16 +638,19 @@ function aggregateWeeklyData(data) {
         id: vid, title: d.video_title,
         thumbnail: d.video_thumbnail_url, url: d.video_url,
         playlist_id: d.playlist_id, playlist_title: d.playlist_title,
-        views_gained: 0, likes_gained: 0, engagement: 0,
-        total_views: 0, days_since_published: 0,
+        views_gained: 0, likes_gained: 0, comments_gained: 0, engagement: 0,
+        total_views: 0, total_likes: 0, total_comments: 0, days_since_published: 0,
       };
     }
     const v = videoAgg[vid];
-    v.views_gained += d.views_gained || 0;
-    v.likes_gained += d.likes_gained || 0;
-    v.engagement   += d.engagement_score || 0;
+    v.views_gained    += d.views_gained    || 0;
+    v.likes_gained    += d.likes_gained    || 0;
+    v.comments_gained += d.comments_gained || 0;
+    v.engagement      += d.engagement_score || 0;
     if ((d.total_views || 0) > v.total_views) {
-      v.total_views = d.total_views || 0;
+      v.total_views          = d.total_views || 0;
+      v.total_likes          = d.total_likes || 0;
+      v.total_comments       = d.total_comments || 0;
       v.days_since_published = d.days_since_published || 0;
     }
   });
@@ -640,29 +661,31 @@ function aggregateWeeklyData(data) {
 
 // ---- Render playlist cards (with inline accordion) ----
 
-function renderPlaylistCards(playlists) {
+function renderPlaylistCards(playlists, metric = 'views') {
   const container = document.getElementById('playlist-cards');
   if (!playlists.length) { container.innerHTML = ''; return; }
 
-  const maxViews = playlists[0].views_gained || 1;
+  const m = PLAYLIST_METRICS[metric];
+  const sortedPlaylists = playlists.slice().sort((a, b) => b[m.key] - a[m.key]);
+  const maxViews = sortedPlaylists[0][m.key] || 1;
   const chevron = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  container.innerHTML = playlists.map(p => `
+  container.innerHTML = sortedPlaylists.map(p => `
     <div class="pl-item" data-playlist-id="${p.id}">
       <div class="pl-row" role="button" tabindex="0" aria-expanded="false">
         <img class="pl-row-thumb" src="${p.thumbnail}" alt="${escHtml(p.title)}" loading="lazy">
         <div class="pl-row-body">
           <div class="pl-row-top">
             <span class="pl-row-title">${escHtml(p.title)}</span>
-            <span class="pl-row-gained">+${formatNumber(p.views_gained)} <span class="pl-row-gained-label">vistas</span></span>
+            <span class="pl-row-gained">${metric === 'age' ? formatAge(p[m.key]) : `+${formatNumber(p[m.key])}`} <span class="pl-row-gained-label">${metric === 'age' ? 'antigüedad' : m.label}</span></span>
           </div>
           <div class="pl-row-bar-wrap">
-            <div class="pl-row-bar" style="width:${Math.round(p.views_gained / maxViews * 100)}%"></div>
+            <div class="pl-row-bar" style="width:${Math.round(p[m.key] / maxViews * 100)}%"></div>
           </div>
           <div class="pl-row-meta">
             <span>${formatNumberCompact(p.total_views)} acum.</span>
             <span>${p.video_count} videos</span>
-            <span>${p.like_rate.toFixed(1)}% likes</span>
+            <span>${formatNumber(p.total_likes)} likes</span>
           </div>
         </div>
         <span class="pl-chevron">${chevron}</span>
@@ -671,6 +694,7 @@ function renderPlaylistCards(playlists) {
     </div>
   `).join('');
 
+  container.querySelectorAll('[data-playlist-id]').forEach(item => item._plData = sortedPlaylists.find(p => p.id === item.dataset.playlistId));
   container.querySelectorAll('.pl-row').forEach(row => {
     row.addEventListener('click', () => {
       const item  = row.closest('.pl-item');
@@ -707,7 +731,17 @@ function renderVideosInPanel(panel, playlistId) {
     return;
   }
 
-  const maxViews = videos[0].views_gained || 1;
+  const m    = PLAYLIST_METRICS[currentPlaylistMetric];
+  const vKey = m.videoKey ?? m.key;
+  const isAge = currentPlaylistMetric === 'age';
+  const sorted = videos.slice().sort((a, b) => b[vKey] - a[vKey]);
+  const maxVal = sorted[0][vKey] || 1;
+
+  // Normalized age bar within this playlist
+  const ages = videos.map(v => v.days_since_published || 0);
+  const minAge = Math.min(...ages);
+  const maxAge = Math.max(...ages);
+  const ageRange = maxAge - minAge || 1;
 
   panel.innerHTML = `
     <div class="pl-panel-header">
@@ -715,36 +749,48 @@ function renderVideosInPanel(panel, playlistId) {
       <span class="pl-panel-count">${videos.length}</span>
     </div>
     <div class="pl-panel-videos">
-      ${videos.map((v, i) => `
+      ${sorted.map((v, i) => {
+        const agePct = Math.max(8, Math.round(((v.days_since_published || 0) - minAge) / ageRange * 100));
+        const gainedDisplay = isAge
+          ? `${formatAge(v[vKey])} <span class="video-gained-label">antigüedad</span>`
+          : `+${formatNumber(v[vKey])} <span class="video-gained-label">${m.label}</span>`;
+        return `
         <a href="${v.url}" target="_blank" rel="noopener" class="video-row">
-          <span class="video-rank">${i + 1}</span>
+          <div class="video-rank-col">
+            <span class="video-rank">${i + 1}</span>
+            <div class="video-age-bar-wrap"><div class="video-age-bar" style="width:${agePct}%"></div></div>
+          </div>
           <img class="video-thumb" src="${v.thumbnail}" alt="${escHtml(v.title)}" loading="lazy">
           <div class="video-info">
             <div class="video-title">${escHtml(v.title)}</div>
-            <div class="video-meta">${v.days_since_published}d publicado</div>
+            <div class="video-accum">${formatNumberCompact(v.total_views)} acum. · ${formatNumberCompact(v.total_likes)} likes · ${formatNumberCompact(v.total_comments)} com.</div>
             <div class="video-bar-wrap">
-              <div class="video-bar" style="width:${Math.round(v.views_gained / maxViews * 100)}%"></div>
+              <div class="video-bar" style="width:${Math.round(v[vKey] / maxVal * 100)}%"></div>
             </div>
           </div>
           <div class="video-stats">
-            <span class="video-views-gained">+${formatNumber(v.views_gained)}</span>
-            <span class="video-views-total">${formatNumberCompact(v.total_views)} total</span>
+            <span class="video-gained">${gainedDisplay}</span>
           </div>
         </a>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
 }
 
 // ---- Render weekly chart ----
 
-function renderWeeklyChart(playlists) {
+function renderWeeklyChart(playlists, metric = 'views') {
+  const m = PLAYLIST_METRICS[metric];
+  const titleEl = document.getElementById('chart-title-playlist');
+  if (titleEl) titleEl.textContent = metric === 'age' ? `${m.chartLabel} · Top 5` : `${m.chartLabel} por Playlist · Top 5`;
+
   const ctx = document.getElementById('chart-weekly-views').getContext('2d');
   if (chartWeeklyViews) chartWeeklyViews.destroy();
 
-  const top    = playlists.slice(0, 5);
+  const isAge  = metric === 'age';
+  const top    = playlists.slice().sort((a, b) => b[m.key] - a[m.key]).slice(0, 5);
   const labels = top.map(p => firstWords(p.title));
-  const values = top.map(p => p.views_gained);
+  const values = top.map(p => p[m.key]);
   const colors = top.map((_, i) => PLAYLIST_COLORS[i % PLAYLIST_COLORS.length]);
 
   chartWeeklyViews = new Chart(ctx, {
@@ -765,7 +811,7 @@ function renderWeeklyChart(playlists) {
           align: 'end',
           color: '#b0b0b0',
           font: { size: 10, weight: '600' },
-          formatter: v => v > 0 ? `+${formatNumberCompact(v)}` : '',
+          formatter: v => v > 0 ? (isAge ? formatAge(v) : `+${formatNumberCompact(v)}`) : '',
         },
       }],
     },
@@ -796,13 +842,19 @@ function renderWeeklyChart(playlists) {
 
 // ---- Render weekly video chart ----
 
-function renderWeeklyVideoChart(videos) {
+function renderWeeklyVideoChart(videos, metric = 'views') {
+  const m    = PLAYLIST_METRICS[metric];
+  const vKey = m.videoKey ?? m.key;
+  const titleEl = document.getElementById('chart-title-video');
+  if (titleEl) titleEl.textContent = `${m.videoChartLabel ?? m.chartLabel} · Top 5`;
+
   const ctx = document.getElementById('chart-weekly-video-views').getContext('2d');
   if (chartWeeklyVideoViews) chartWeeklyVideoViews.destroy();
 
-  const top    = videos.slice(0, 5);
+  const isAge  = metric === 'age';
+  const top    = videos.slice().sort((a, b) => b[vKey] - a[vKey]).slice(0, 5);
   const labels = top.map(v => firstWords(v.title));
-  const values = top.map(v => v.views_gained);
+  const values = top.map(v => v[vKey]);
   const colors = top.map((_, i) => PLAYLIST_COLORS[i % PLAYLIST_COLORS.length]);
 
   chartWeeklyVideoViews = new Chart(ctx, {
@@ -823,7 +875,7 @@ function renderWeeklyVideoChart(videos) {
           align: 'end',
           color: '#b0b0b0',
           font: { size: 10, weight: '600' },
-          formatter: v => v > 0 ? `+${formatNumberCompact(v)}` : '',
+          formatter: v => v > 0 ? (isAge ? formatAge(v) : `+${formatNumberCompact(v)}`) : '',
         },
       }],
     },
@@ -868,10 +920,15 @@ function renderVideoTooltip(context, videos) {
   const idx = tooltip.dataPoints[0].dataIndex;
   const v   = videos[idx];
 
+  const vm   = PLAYLIST_METRICS[currentPlaylistMetric];
+  const vvKey = vm.videoKey ?? vm.key;
+  const vValDisplay = currentPlaylistMetric === 'age'
+    ? `${formatAge(v[vvKey])} <span class="tooltip-pl-label">antigüedad</span>`
+    : `+${formatNumber(v[vvKey])} <span class="tooltip-pl-label">${vm.label}</span>`;
   el.innerHTML = `
     <img src="${v.thumbnail}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;display:block;margin-bottom:8px;">
     <div class="tooltip-pl-title">${escHtml(v.title)}</div>
-    <div class="tooltip-pl-views">+${formatNumber(v.views_gained)} <span class="tooltip-pl-label">vistas</span></div>
+    <div class="tooltip-pl-views">${vValDisplay}</div>
     <div class="tooltip-pl-meta">${formatNumberCompact(v.total_views)} acum. · ${v.days_since_published}d publicado</div>
   `;
 
@@ -901,10 +958,14 @@ function renderPlaylistTooltip(context, playlists) {
   const idx = tooltip.dataPoints[0].dataIndex;
   const p   = playlists[idx];
 
+  const pm = PLAYLIST_METRICS[currentPlaylistMetric];
+  const pValDisplay = currentPlaylistMetric === 'age'
+    ? `${formatAge(p[pm.key])} <span class="tooltip-pl-label">antigüedad</span>`
+    : `+${formatNumber(p[pm.key])} <span class="tooltip-pl-label">${pm.label}</span>`;
   el.innerHTML = `
     <img src="${p.thumbnail}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;display:block;margin-bottom:8px;">
     <div class="tooltip-pl-title">${escHtml(p.title)}</div>
-    <div class="tooltip-pl-views">+${formatNumber(p.views_gained)} <span class="tooltip-pl-label">vistas</span></div>
+    <div class="tooltip-pl-views">${pValDisplay}</div>
     <div class="tooltip-pl-meta">${formatNumberCompact(p.total_views)} acum. · ${p.video_count} videos</div>
   `;
 
@@ -919,10 +980,35 @@ function renderPlaylistTooltip(context, playlists) {
 }
 
 
+// ---- Metric toggle ----
+
+function initMetricToggle() {
+  const toggle = document.getElementById('weekly-metric-toggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('.btn-metric').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.dataset.metric;
+      if (metric === currentPlaylistMetric) return;
+      currentPlaylistMetric = metric;
+      toggle.querySelectorAll('.btn-metric').forEach(b => b.classList.remove('btn-metric--active'));
+      btn.classList.add('btn-metric--active');
+      renderByMetric(metric);
+    });
+  });
+}
+
+function formatAge(days) {
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}m`;
+  const years = Math.floor(days / 365);
+  return `${years}a`;
+}
+
 // ---- Weekly helpers ----
 
 function formatWeekLabel(isoDate) {
-  const d = new Date(isoDate + 'T00:00:00');
+  const d = new Date(isoDate.slice(0, 10) + 'T00:00:00');
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
 }
 
@@ -948,7 +1034,403 @@ function escHtml(str) {
 }
 
 // ============================================================
+// SECTION 3: HISTÓRICO SEMANAL
+// ============================================================
+
+const HISTORICO_PLAYLIST_URL = 'https://storage.googleapis.com/angelgarciadatablog-analytics/weekly/view-playlist-weekly-evolution.json';
+const HISTORICO_VIDEO_URL    = 'https://storage.googleapis.com/angelgarciadatablog-analytics/weekly/view-video-weekly-evolution-relevant.json';
+
+const HISTORICO_PALETTE = [
+  { views: 'rgba(38,116,237,1)',  likes: 'rgba(38,116,237,0.6)',  comments: 'rgba(38,116,237,0.3)'  },
+  { views: 'rgba(124,58,237,1)', likes: 'rgba(124,58,237,0.6)', comments: 'rgba(124,58,237,0.3)' },
+  { views: 'rgba(236,72,153,1)', likes: 'rgba(236,72,153,0.6)', comments: 'rgba(236,72,153,0.3)' },
+];
+const HISTORICO_METRIC_DASH   = { views: [],     likes: [6, 3], comments: [2, 4] };
+const HISTORICO_METRIC_LABELS = { views: 'Vistas', likes: 'Likes', comments: 'Comentarios' };
+
+let historicoPlaylists     = {};
+let historicoVideos        = {};
+let historicoPlaylistDates = [];
+let historicoVideoDates    = [];
+let selPlaylists           = [];
+let selVideos              = [];
+let activePlMetrics        = ['views'];
+let activeVidMetrics       = ['views'];
+let chartHistPlaylists     = null;
+let chartHistVideos        = null;
+let histPlSort             = { col: 'views_acum', dir: 'desc' };
+let histVidSort            = { col: 'views_acum', dir: 'desc' };
+
+async function initHistorico() {
+  try {
+    const [plRes, vidRes] = await Promise.all([fetch(HISTORICO_PLAYLIST_URL), fetch(HISTORICO_VIDEO_URL)]);
+    if (!plRes.ok || !vidRes.ok) throw new Error('HTTP error');
+    const [plRaw, vidRaw] = await Promise.all([plRes.json(), vidRes.json()]);
+
+    historicoPlaylists     = aggregateHistoricoPlaylists(plRaw);
+    historicoVideos        = aggregateHistoricoVideos(vidRaw);
+    historicoPlaylistDates = getHistoricoDates(historicoPlaylists);
+    historicoVideoDates    = getHistoricoDates(historicoVideos);
+
+    selPlaylists = getHistoricoTop(historicoPlaylists, 'views', 3);
+    selVideos    = getHistoricoTop(historicoVideos,    'views', 3);
+
+    chartHistPlaylists = renderHistoricoChart('chart-hist-playlists', chartHistPlaylists, historicoPlaylists, historicoPlaylistDates, selPlaylists, activePlMetrics);
+    chartHistVideos    = renderHistoricoChart('chart-hist-videos',    chartHistVideos,    historicoVideos,    historicoVideoDates,    selVideos,    activeVidMetrics);
+    renderHistoricoTable('historico-pl-table',  historicoPlaylists, selPlaylists, toggleHistoricoPlaylist, 'playlist');
+    renderHistoricoTable('historico-vid-table', historicoVideos,    selVideos,    toggleHistoricoVideo,    'video');
+    initHistoricoPlaylistMetricToggle();
+    initHistoricoVideoMetricToggle();
+  } catch (err) {
+    console.error('Error loading histórico data:', err);
+  }
+}
+
+// ---- Aggregation ----
+
+function aggregateHistoricoPlaylists(raw) {
+  const byId = {};
+  raw.forEach(d => {
+    if (!byId[d.playlist_id]) {
+      byId[d.playlist_id] = {
+        id: d.playlist_id, title: d.playlist_title, thumbnail: d.thumbnail_url, url: d.playlist_url,
+        weeks: [], video_count: 0, days_since_playlist_created: 0,
+        total_views: 0, total_likes: 0, total_comments: 0,
+      };
+    }
+    const p = byId[d.playlist_id];
+    p.video_count = Math.max(p.video_count, d.video_count || 0);
+    p.days_since_playlist_created = Math.max(p.days_since_playlist_created, d.days_since_playlist_created || 0);
+    if ((d.total_playlist_views || 0) > p.total_views) {
+      p.total_views    = d.total_playlist_views    || 0;
+      p.total_likes    = d.total_playlist_likes    || 0;
+      p.total_comments = d.total_playlist_comments || 0;
+    }
+    p.weeks.push({
+      snapshot_date:   d.snapshot_date,
+      week_number:     d.week_number,
+      views_gained:    d.total_views_gained    || 0,
+      likes_gained:    d.total_likes_gained    || 0,
+      comments_gained: d.total_comments_gained || 0,
+    });
+  });
+  Object.values(byId).forEach(p => p.weeks.sort((a, b) => new Date(a.snapshot_date) - new Date(b.snapshot_date)));
+  return byId;
+}
+
+function aggregateHistoricoVideos(raw) {
+  const byId = {};
+  raw.forEach(d => {
+    if (!byId[d.video_id]) {
+      byId[d.video_id] = {
+        id: d.video_id, title: d.title, thumbnail: d.thumbnail_url, url: d.video_url,
+        weeks: [], days_since_published: 0,
+        total_views: 0, total_likes: 0, total_comments: 0,
+      };
+    }
+    const v = byId[d.video_id];
+    v.days_since_published = Math.max(v.days_since_published, d.days_since_published || 0);
+    if ((d.total_views || 0) > v.total_views) {
+      v.total_views    = d.total_views    || 0;
+      v.total_likes    = d.total_likes    || 0;
+      v.total_comments = d.total_comments || 0;
+    }
+    v.weeks.push({
+      snapshot_date:   d.snapshot_date,
+      week_number:     d.week_number,
+      views_gained:    d.views_gained    || 0,
+      likes_gained:    d.likes_gained    || 0,
+      comments_gained: d.comments_gained || 0,
+    });
+  });
+  Object.values(byId).forEach(v => v.weeks.sort((a, b) => new Date(a.snapshot_date) - new Date(b.snapshot_date)));
+  return byId;
+}
+
+function getHistoricoDates(dataById) {
+  const dates = new Set();
+  Object.values(dataById).forEach(item => item.weeks.forEach(w => dates.add(w.snapshot_date)));
+  return Array.from(dates).sort();
+}
+
+function getHistoricoTop(dataById, metric, n) {
+  const key = `${metric}_gained`;
+  return Object.values(dataById)
+    .map(item => ({ id: item.id, total: item.weeks.reduce((s, w) => s + (w[key] || 0), 0) }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, n)
+    .map(x => x.id);
+}
+
+// ---- Chips ----
+
+function renderHistoricoChips(containerId, dataById, selectedIds, onToggle) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const items = Object.values(dataById).sort((a, b) => {
+    const aT = a.weeks.reduce((s, w) => s + w.views_gained, 0);
+    const bT = b.weeks.reduce((s, w) => s + w.views_gained, 0);
+    return bT - aT;
+  });
+  container.innerHTML = items.map(item => {
+    const isActive   = selectedIds.includes(item.id);
+    const selIdx     = selectedIds.indexOf(item.id);
+    const isDisabled = !isActive && selectedIds.length >= 3;
+    const palette    = isActive ? HISTORICO_PALETTE[selIdx % HISTORICO_PALETTE.length] : null;
+    const inlineStyle = palette
+      ? `style="border-color:${palette.views};background:${palette.views.replace('1)', '0.12)')}"`
+      : '';
+    return `<button class="historico-chip${isActive ? ' historico-chip--active' : ''}${isDisabled ? ' historico-chip--disabled' : ''}" ${inlineStyle} data-id="${item.id}">${escHtml(shortTitle(item.title, 24))}</button>`;
+  }).join('');
+  container.querySelectorAll('.historico-chip:not(.historico-chip--disabled)').forEach(chip => {
+    chip.addEventListener('click', () => onToggle(chip.dataset.id));
+  });
+}
+
+// ---- Chart ----
+
+function renderHistoricoChart(canvasId, existingChart, dataById, allDates, selectedIds, activeMetrics) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  if (existingChart) existingChart.destroy();
+  const labels   = allDates.map(d => formatWeekLabel(d));
+  const datasets = [];
+  selectedIds.forEach((id, idx) => {
+    const item = dataById[id];
+    if (!item) return;
+    const palette = HISTORICO_PALETTE[idx % HISTORICO_PALETTE.length];
+    activeMetrics.forEach(metric => {
+      const key    = `${metric}_gained`;
+      const points = allDates.map(date => {
+        const week = item.weeks.find(w => w.snapshot_date === date);
+        return week !== undefined ? week[key] : null;
+      });
+      datasets.push({
+        label:            `${firstWords(item.title, 4)} · ${HISTORICO_METRIC_LABELS[metric]}`,
+        data:             points,
+        borderColor:      palette[metric],
+        backgroundColor:  palette[metric].replace(/[\d.]+\)$/, '0.08)'),
+        borderDash:       HISTORICO_METRIC_DASH[metric],
+        borderWidth:      metric === 'views' ? 2 : 1.5,
+        pointRadius:      4,
+        pointHoverRadius: 6,
+        tension:          0.3,
+        spanGaps:         false,
+        fill:             false,
+      });
+    });
+  });
+  return new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { color: '#b0b0b0', font: { size: 11 }, boxWidth: 16, padding: 12, usePointStyle: true },
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${formatNumber(ctx.parsed.y ?? 0)}` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#b0b0b0', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#b0b0b0', font: { size: 11 }, callback: v => formatNumberCompact(v) },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+        },
+      },
+    },
+  });
+}
+
+// ---- Table ----
+
+function historicoSortVal(item, col, isPlaylist) {
+  switch (col) {
+    case 'name':           return item.title.toLowerCase();
+    case 'video_count':    return item.video_count;
+    case 'age':            return isPlaylist ? item.days_since_playlist_created : item.days_since_published;
+    case 'views_hist':     return item.total_views;
+    case 'likes_hist':     return item.total_likes;
+    case 'comments_hist':  return item.total_comments;
+    case 'views_acum':     return item.weeks.reduce((s, w) => s + w.views_gained,    0);
+    case 'likes_acum':     return item.weeks.reduce((s, w) => s + w.likes_gained,    0);
+    case 'comments_acum':  return item.weeks.reduce((s, w) => s + w.comments_gained, 0);
+    default: return 0;
+  }
+}
+
+function renderHistoricoTable(tableId, dataById, selectedIds, onToggle, type) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const isPlaylist = type === 'playlist';
+  const sort = isPlaylist ? histPlSort : histVidSort;
+
+  const items = Object.values(dataById).sort((a, b) => {
+    const av = historicoSortVal(a, sort.col, isPlaylist);
+    const bv = historicoSortVal(b, sort.col, isPlaylist);
+    if (typeof av === 'string') return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sort.dir === 'asc' ? av - bv : bv - av;
+  });
+
+  const icon = (col) => {
+    if (sort.col !== col) return `<span class="historico-sort-icon">↕</span>`;
+    return `<span class="historico-sort-icon historico-sort-icon--active">${sort.dir === 'asc' ? '↑' : '↓'}</span>`;
+  };
+  const th = (label, col, cls = 'historico-th-val') =>
+    `<th class="${cls} historico-th-sortable" data-col="${col}">${label}${icon(col)}</th>`;
+
+  const headExtra = isPlaylist
+    ? `${th('Videos', 'video_count')}${th('Antigüedad', 'age')}`
+    : `${th('Antigüedad', 'age')}`;
+
+  table.innerHTML = `
+    <thead><tr>
+      ${th('Nombre', 'name', 'historico-th-name historico-th-sortable')}
+      ${headExtra}
+      ${th('Vistas hist.',    'views_hist')}
+      ${th('Likes hist.',     'likes_hist')}
+      ${th('Com. hist.',      'comments_hist')}
+      ${th('Vistas acum.',    'views_acum')}
+      ${th('Likes acum.',     'likes_acum')}
+      ${th('Com. acum.',      'comments_acum')}
+    </tr></thead>
+    <tbody>
+      ${items.map(item => {
+        const isSelected = selectedIds.includes(item.id);
+        const selIdx     = selectedIds.indexOf(item.id);
+        const palette    = isSelected ? HISTORICO_PALETTE[selIdx % HISTORICO_PALETTE.length] : null;
+        const rowBg      = isSelected ? `background:${palette.views.replace('1)', '0.08)')}` : '';
+        const borderLeft = isSelected ? `border-left:3px solid ${palette.views}` : 'border-left:3px solid transparent';
+        const age        = isPlaylist ? formatAge(item.days_since_playlist_created) : formatAge(item.days_since_published);
+        const extraCols  = isPlaylist
+          ? `<td class="historico-td-val">${item.video_count}</td><td class="historico-td-val">${age}</td>`
+          : `<td class="historico-td-val">${age}</td>`;
+        const vAcum = item.weeks.reduce((s, w) => s + w.views_gained,    0);
+        const lAcum = item.weeks.reduce((s, w) => s + w.likes_gained,    0);
+        const cAcum = item.weeks.reduce((s, w) => s + w.comments_gained, 0);
+        return `<tr class="historico-tr--clickable${isSelected ? ' historico-tr--selected' : ''}" style="${rowBg}" data-id="${item.id}">
+          <td class="historico-td-name${isSelected ? ' historico-td-selected' : ''}" style="${borderLeft}">${escHtml(item.title)}</td>
+          ${extraCols}
+          <td class="historico-td-val">${formatNumberCompact(item.total_views)}</td>
+          <td class="historico-td-val">${formatNumberCompact(item.total_likes)}</td>
+          <td class="historico-td-val">${formatNumberCompact(item.total_comments)}</td>
+          <td class="historico-td-total">${formatNumberCompact(vAcum)}</td>
+          <td class="historico-td-val">${formatNumberCompact(lAcum)}</td>
+          <td class="historico-td-val">${formatNumberCompact(cAcum)}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>`;
+
+  table.querySelectorAll('.historico-th-sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      const s   = isPlaylist ? histPlSort : histVidSort;
+      if (s.col === col) { s.dir = s.dir === 'desc' ? 'asc' : 'desc'; }
+      else               { s.col = col; s.dir = 'desc'; }
+      renderHistoricoTable(tableId, dataById, selectedIds, onToggle, type);
+    });
+  });
+
+  if (onToggle) {
+    table.querySelectorAll('.historico-tr--clickable').forEach(row => {
+      row.addEventListener('click', () => onToggle(row.dataset.id));
+    });
+  }
+}
+
+// ---- Toggle handlers ----
+
+function toggleHistoricoPlaylist(id) {
+  if (selPlaylists.includes(id)) {
+    if (selPlaylists.length === 1) return;
+    selPlaylists = selPlaylists.filter(x => x !== id);
+  } else if (selPlaylists.length < 3) {
+    if (selPlaylists.length === 1 && activePlMetrics.length > 1) {
+      activePlMetrics = ['views'];
+      syncHistoricoToggleUI('historico-pl-metric-toggle', activePlMetrics);
+    }
+    selPlaylists = [...selPlaylists, id];
+  }
+  chartHistPlaylists = renderHistoricoChart('chart-hist-playlists', chartHistPlaylists, historicoPlaylists, historicoPlaylistDates, selPlaylists, activePlMetrics);
+  renderHistoricoTable('historico-pl-table', historicoPlaylists, selPlaylists, toggleHistoricoPlaylist, 'playlist');
+}
+
+function toggleHistoricoVideo(id) {
+  if (selVideos.includes(id)) {
+    if (selVideos.length === 1) return;
+    selVideos = selVideos.filter(x => x !== id);
+  } else if (selVideos.length < 3) {
+    if (selVideos.length === 1 && activeVidMetrics.length > 1) {
+      activeVidMetrics = ['views'];
+      syncHistoricoToggleUI('historico-vid-metric-toggle', activeVidMetrics);
+    }
+    selVideos = [...selVideos, id];
+  }
+  chartHistVideos = renderHistoricoChart('chart-hist-videos', chartHistVideos, historicoVideos, historicoVideoDates, selVideos, activeVidMetrics);
+  renderHistoricoTable('historico-vid-table', historicoVideos, selVideos, toggleHistoricoVideo, 'video');
+}
+
+function syncHistoricoToggleUI(toggleId, activeMetrics) {
+  const toggle = document.getElementById(toggleId);
+  if (!toggle) return;
+  toggle.querySelectorAll('.btn-metric').forEach(b => {
+    b.classList.toggle('btn-metric--active', activeMetrics.includes(b.dataset.metric));
+  });
+}
+
+function initHistoricoPlaylistMetricToggle() {
+  const toggle = document.getElementById('historico-pl-metric-toggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('.btn-metric').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.dataset.metric;
+      if (selPlaylists.length <= 1) {
+        if (activePlMetrics.includes(metric) && activePlMetrics.length > 1) {
+          activePlMetrics = activePlMetrics.filter(m => m !== metric);
+        } else if (!activePlMetrics.includes(metric)) {
+          activePlMetrics = [...activePlMetrics, metric];
+        }
+      } else {
+        activePlMetrics = [metric];
+      }
+      syncHistoricoToggleUI('historico-pl-metric-toggle', activePlMetrics);
+      chartHistPlaylists = renderHistoricoChart('chart-hist-playlists', chartHistPlaylists, historicoPlaylists, historicoPlaylistDates, selPlaylists, activePlMetrics);
+    });
+  });
+}
+
+function initHistoricoVideoMetricToggle() {
+  const toggle = document.getElementById('historico-vid-metric-toggle');
+  if (!toggle) return;
+  toggle.querySelectorAll('.btn-metric').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.dataset.metric;
+      if (selVideos.length <= 1) {
+        if (activeVidMetrics.includes(metric) && activeVidMetrics.length > 1) {
+          activeVidMetrics = activeVidMetrics.filter(m => m !== metric);
+        } else if (!activeVidMetrics.includes(metric)) {
+          activeVidMetrics = [...activeVidMetrics, metric];
+        }
+      } else {
+        activeVidMetrics = [metric];
+      }
+      syncHistoricoToggleUI('historico-vid-metric-toggle', activeVidMetrics);
+      chartHistVideos = renderHistoricoChart('chart-hist-videos', chartHistVideos, historicoVideos, historicoVideoDates, selVideos, activeVidMetrics);
+    });
+  });
+}
+
+// ============================================================
 // START
 // ============================================================
 init();
 initWeekly();
+initHistorico();
