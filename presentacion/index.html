@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>End-to-End Pipeline for YouTube Analytics · Angel Garcia</title>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS — angelgarciadatablog v1
+       ============================================================ */
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --card-bg: #1a1a1a;
+      --text: #ffffff;
+      --text-secondary: #b0b0b0;
+      --border: #2a2a2a;
+      --border-light: #1f1f1f;
+      --success: #85d992;
+      --danger: #f04438;
+      --gradient: linear-gradient(90deg, #2674ed 0%, #7c3aed 50%, #ec4899 100%);
+      --gradient-hover: linear-gradient(90deg, #1e5dd8 0%, #6d28d9 50%, #db2777 100%);
+      --accent: #2674ed;
+      --accent-mid: #7c3aed;
+      --accent-end: #ec4899;
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.5);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.6), 0 2px 4px -1px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.7), 0 4px 6px -2px rgba(0,0,0,0.5);
+      --shadow-accent: 0 10px 25px -5px rgba(124,58,237,0.4), 0 4px 6px -2px rgba(124,58,237,0.3);
+      --radius: 12px;
+      --radius-lg: 16px;
+    }
+
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow: hidden;
+      height: 100vh;
+    }
+    a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s ease; }
+    a:hover { color: var(--text); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ============================================================
+       SLIDES — DESKTOP
+       ============================================================ */
+    .slides-container {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      overflow-y: auto;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .slide-content {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    /* ============================================================
+       NAVEGACIÓN
+       ============================================================ */
+    .nav-arrows {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 100;
+    }
+
+    .nav-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      border-color: var(--accent-mid);
+      color: var(--text);
+      background: rgba(124,58,237,0.1);
+    }
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .nav-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-dot.active {
+      width: 20px;
+      border-radius: 3px;
+      background: var(--accent-mid);
+    }
+
+    .slide-counter {
+      position: fixed;
+      top: 24px;
+      right: 32px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      z-index: 100;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ============================================================
+       TYPOGRAPHY
+       ============================================================ */
+    .gradient-text {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .slide-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-mid);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .slide-title {
+      font-size: clamp(26px, 3.5vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .slide-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    /* ============================================================
+       CARDS
+       ============================================================ */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .card--accent {
+      border-color: rgba(124,58,237,0.3);
+      background: rgba(124,58,237,0.05);
+    }
+    .card--warn {
+      border-color: rgba(240,68,56,0.3);
+      background: rgba(240,68,56,0.04);
+    }
+    .card--success {
+      border-color: rgba(133,217,146,0.3);
+      background: rgba(133,217,146,0.04);
+    }
+
+    .ibadge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+                  var(--gradient) border-box;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       BADGE / CHIP
+       ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-mid);
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+    .badge-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-mid);
+    }
+    .tech-chip {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+    }
+
+    /* ============================================================
+       LISTAS
+       ============================================================ */
+    .check-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .check-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .check-list li span:first-child {
+      color: var(--accent-mid);
+      font-size: 13px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .warn-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .warn-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .warn-list li span:first-child {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       CODE BLOCK
+       ============================================================ */
+    pre {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.7;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    }
+    code { font-family: inherit; }
+    .kw  { color: #7c3aed; }
+    .fn  { color: #2674ed; }
+    .str { color: #85d992; }
+    .cm  { color: #555; font-style: italic; }
+    .cls { color: #ec4899; }
+    .var { color: #b0b0b0; }
+
+    /* ============================================================
+       GRIDS
+       ============================================================ */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    /* ============================================================
+       PIPELINE VISUAL
+       ============================================================ */
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pipeline-node {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      position: relative;
+    }
+    .pipeline-node::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gradient);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .pipeline-arrow {
+      color: var(--accent-mid);
+      opacity: 0.6;
+      font-size: 18px;
+    }
+    .pipeline-node-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       SLIDE PORTADA especial
+       ============================================================ */
+    .slide-portada {
+      background: var(--bg);
+    }
+    .portada-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-mid);
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 5px 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .portada-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-mid);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:.4; transform:scale(.7); }
+    }
+    .portada-title {
+      font-size: clamp(36px, 5vw, 58px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    .portada-desc {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 580px;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .portada-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 40px;
+    }
+    .portada-meta {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .portada-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .portada-meta-value {
+      font-size: 22px;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .portada-meta-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================================
+       BUTTONS
+       ============================================================ */
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: linear-gradient(var(--bg), var(--bg)) padding-box,
+                  var(--gradient) border-box;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-outline:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-accent);
+      color: var(--text);
+    }
+
+    /* ============================================================
+       FOOTER LINE
+       ============================================================ */
+    .slide-footer-line {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: var(--gradient);
+      opacity: 0.2;
+      z-index: 50;
+    }
+
+    /* ============================================================
+       TABLA
+       ============================================================ */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 9px 12px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    td:first-child { color: var(--text); font-weight: 500; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ============================================================
+       MOBILE — scroll vertical
+       ============================================================ */
+    @media (max-width: 768px) {
+      body {
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+      }
+      .slides-container {
+        height: auto;
+        overflow: visible;
+      }
+      .slide {
+        position: relative;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: none !important;
+        height: auto;
+        min-height: 100vh;
+        padding: 60px 20px 100px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .slide:last-child { border-bottom: none; }
+      .nav-arrows { position: fixed; bottom: 20px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .portada-meta { gap: 24px; }
+      .pipeline-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slide-counter">
+    <span id="counter-current">1</span> / <span id="counter-total">11</span>
+  </div>
+
+  <div class="slides-container" id="slides">
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 1 — PORTADA
+         ══════════════════════════════════════════ -->
+    <div class="slide slide-portada active" data-index="0">
+      <div class="slide-content">
+
+        <div class="portada-label">
+          <span class="portada-dot"></span>
+          Proyecto de portafolio · End-to-End
+        </div>
+
+        <h1 class="portada-title">
+          End-to-End Pipeline<br>
+          for <span class="gradient-text">YouTube Analytics</span>
+        </h1>
+
+        <p class="portada-desc">
+          Pipeline automatizado que extrae datos de YouTube, los transforma en BigQuery
+          y los sirve como dashboard interactivo. Arquitectura low-cost sobre Google Cloud.
+        </p>
+
+        <div class="portada-chips">
+          <span class="tech-chip">Python 3.11</span>
+          <span class="tech-chip">YouTube API v3</span>
+          <span class="tech-chip">BigQuery</span>
+          <span class="tech-chip">Cloud Functions</span>
+          <span class="tech-chip">Cloud Scheduler</span>
+          <span class="tech-chip">Cloud Storage</span>
+          <span class="tech-chip">Chart.js</span>
+          <span class="tech-chip">GitHub Pages</span>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:32px;">
+          <a href="https://angelgarciadatablog.com/youtube-insights-dashboard" target="_blank" class="btn-outline">
+            Ver Dashboard →
+          </a>
+          <a href="https://console.cloud.google.com/bigquery?ws=!1m4!1m3!3m2!1syoutube-datasets-360!2sangelgarciadatablog" target="_blank" class="btn-outline">
+            Dataset Público en BigQuery →
+          </a>
+        </div>
+
+        <div class="portada-meta">
+          <div class="portada-meta-item">
+            <span class="portada-meta-value">3</span>
+            <span class="portada-meta-label">Repositorios</span>
+          </div>
+          <div class="portada-meta-item">
+            <span class="portada-meta-value">8</span>
+            <span class="portada-meta-label">Tablas en BigQuery</span>
+          </div>
+          <div class="portada-meta-item">
+            <span class="portada-meta-value">7</span>
+            <span class="portada-meta-label">Endpoints JSON</span>
+          </div>
+          <div class="portada-meta-item">
+            <span class="portada-meta-value">2×</span>
+            <span class="portada-meta-label">Ejecuciones diarias</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 2 — OBSERVACIÓN / CONTEXTO
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="1">
+      <div class="slide-content">
+
+        <span class="slide-tag">Observación · Contexto</span>
+        <h2 class="slide-title">El problema con YouTube Analytics</h2>
+        <p class="slide-subtitle">
+          El dashboard nativo de YouTube no muestra los datos con el nivel de detalle necesario.
+        </p>
+
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card card--warn">
+            <div style="font-size:13px; font-weight:700; color:var(--danger); margin-bottom:10px;">Lo que YouTube Analytics muestra</div>
+            <ul class="check-list">
+              <li><span>✕</span><span>Crecimiento de vistas solo semana actual vs anterior</span></li>
+              <li><span>✕</span><span>Sin histórico acumulado configurable</span></li>
+              <li><span>✕</span><span>Sin contexto por playlist</span></li>
+              <li><span>✕</span><span>Sin vista comparativa semana a semana a lo largo del tiempo</span></li>
+            </ul>
+          </div>
+          <div class="card card--success">
+            <div style="font-size:13px; font-weight:700; color:var(--success); margin-bottom:10px;">Lo que este proyecto responde</div>
+            <ul class="check-list">
+              <li><span>✓</span><span>Histórico acumulado con filtro de fechas libre</span></li>
+              <li><span>✓</span><span>Rendimiento por playlist y video semana a semana</span></li>
+              <li><span>✓</span><span>Evolución comparativa de múltiples playlists</span></li>
+              <li><span>✓</span><span>Datos propios, controlados, en cualquier formato</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card card--accent">
+          <div style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
+            <strong style="color:var(--text);">La oportunidad:</strong> construir una herramienta propia de análisis usando la YouTube Data API v3, con infraestructura serverless de bajo costo, que responda exactamente las preguntas de negocio que importan para entender el canal.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 3 — PROBLEMA + OBJETIVOS
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="2">
+      <div class="slide-content">
+
+        <span class="slide-tag">Planteamiento del Problema · Objetivos</span>
+        <h2 class="slide-title">Preguntas de negocio que guían el proyecto</h2>
+        <p class="slide-subtitle">
+          El enfoque no es hacer Business Intelligence con un modelo relacional,
+          sino escribir queries SQL que respondan preguntas concretas del canal.
+        </p>
+
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Canal</div>
+            <ul class="check-list">
+              <li><span>▸</span><span>¿Cómo ha crecido el número de suscriptores mes a mes?</span></li>
+              <li><span>▸</span><span>¿Cuál es la tendencia acumulada de vistas del canal?</span></li>
+              <li><span>▸</span><span>¿Qué tan rápido crece un video nuevo en sus primeras semanas?</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Videos & Playlists</div>
+            <ul class="check-list">
+              <li><span>▸</span><span>¿Cuáles son los videos con mayor crecimiento de vistas semana a semana?</span></li>
+              <li><span>▸</span><span>¿Qué playlist acumula más engagement en la última semana?</span></li>
+              <li><span>▸</span><span>¿Qué videos entraron o salieron de una playlist recientemente?</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card card--accent">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div class="ibadge" style="margin-top:2px; flex-shrink:0;">◆</div>
+            <div style="font-size:14px; color:var(--text-secondary); line-height:1.7;">
+              <strong style="color:var(--text);">Proceso real:</strong> primero se define qué se quiere entender del canal,
+              luego se traduce a una query SQL, y finalmente se decide cómo visualizarlo.
+              De la pregunta al dato, del dato al gráfico.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 4 — FUENTES DE DATOS
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="3">
+      <div class="slide-content">
+
+        <span class="slide-tag">Fuentes de Datos</span>
+        <h2 class="slide-title">Dataset público en BigQuery</h2>
+        <p class="slide-subtitle">
+          Los datos se recopilan desde la YouTube Data API v3 y se almacenan en BigQuery.
+          El dataset es de acceso público: cualquier persona puede conectarse y practicar SQL con datos reales.
+        </p>
+
+        <div style="margin-bottom:20px;">
+          <div class="card" style="margin-bottom:12px; overflow:hidden;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tabla</th>
+                  <th>Descripción</th>
+                  <th>Frecuencia</th>
+                  <th>Estrategia</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>channels_snapshot</td><td>Suscriptores, vistas, videos del canal</td><td>Diaria</td><td>Append</td></tr>
+                <tr><td>latest_videos_current</td><td>Los 5 videos más recientes con métricas actuales</td><td>Diaria</td><td>Truncate</td></tr>
+                <tr><td>videos_snapshot</td><td>Métricas de todos los videos</td><td>Semanal</td><td>Append</td></tr>
+                <tr><td>playlist_items_snapshot</td><td>Relación playlists ↔ videos</td><td>Semanal</td><td>Append</td></tr>
+                <tr><td>channels_static</td><td>Metadata del canal</td><td>Semanal</td><td>Truncate</td></tr>
+                <tr><td>videos_static</td><td>Metadata de todos los videos</td><td>Semanal</td><td>Truncate</td></tr>
+                <tr><td>playlists_manual_static</td><td>Playlists creadas manualmente</td><td>Semanal</td><td>Truncate</td></tr>
+                <tr><td>playlist_items_manual_static</td><td>Video → playlist (relación actual)</td><td>Semanal</td><td>Truncate</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card--accent" style="display:flex; align-items:center; gap:12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mid)" stroke-width="2" style="flex-shrink:0;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--text);">Dataset público</div>
+              <a href="https://console.cloud.google.com/bigquery?ws=!1m4!1m3!3m2!1syoutube-datasets-360!2sangelgarciadatablog" target="_blank" style="font-size:12px; color:var(--accent-mid);">youtube-datasets-360 · angelgarciadatablog →</a>
+            </div>
+          </div>
+          <div class="card" style="display:flex; align-items:center; gap:12px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="flex-shrink:0;"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 3v18"/></svg>
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--text);">Fuente</div>
+              <div style="font-size:12px; color:var(--text-secondary);">YouTube Data API v3 · Canal propio</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 5 — STACK TECNOLÓGICO
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="4">
+      <div class="slide-content">
+
+        <span class="slide-tag">Stack Tecnológico</span>
+        <h2 class="slide-title">Pipeline de tres capas en Google Cloud</h2>
+
+        <div class="pipeline-row" style="margin-bottom:24px;">
+          <div class="pipeline-node">
+            YouTube API v3
+            <div class="pipeline-node-sub">Fuente de datos</div>
+          </div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-node">
+            Cloud Functions
+            <div class="pipeline-node-sub">ETL en Python 3.11</div>
+          </div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-node">
+            BigQuery
+            <div class="pipeline-node-sub">Data warehouse</div>
+          </div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-node">
+            Cloud Functions
+            <div class="pipeline-node-sub">SQL → JSON</div>
+          </div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-node">
+            Cloud Storage
+            <div class="pipeline-node-sub">JSONs públicos</div>
+          </div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-node">
+            Dashboard
+            <div class="pipeline-node-sub">Chart.js · GitHub Pages</div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div style="font-size:11px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;">Repo 1 · ETL</div>
+            <ul class="check-list">
+              <li><span>▸</span><span>Python 3.11</span></li>
+              <li><span>▸</span><span>YouTube Data API v3</span></li>
+              <li><span>▸</span><span>Google BigQuery</span></li>
+              <li><span>▸</span><span>Cloud Functions</span></li>
+              <li><span>▸</span><span>Cloud Scheduler</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div style="font-size:11px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;">Repo 2 · Servicio</div>
+            <ul class="check-list">
+              <li><span>▸</span><span>Python 3.11</span></li>
+              <li><span>▸</span><span>BigQuery SQL (vistas)</span></li>
+              <li><span>▸</span><span>Cloud Storage</span></li>
+              <li><span>▸</span><span>Cloud Functions</span></li>
+              <li><span>▸</span><span>Cloud Scheduler</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <div style="font-size:11px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;">Repo 3 · Dashboard</div>
+            <ul class="check-list">
+              <li><span>▸</span><span>HTML / CSS / JS vanilla</span></li>
+              <li><span>▸</span><span>Chart.js v4.4</span></li>
+              <li><span>▸</span><span>GitHub Pages</span></li>
+              <li><span>▸</span><span>Fetch API (JSON)</span></li>
+              <li><span>▸</span><span>Sin backend propio</span></li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 6 — ANÁLISIS DE DATOS · EXTRACCIÓN
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="5">
+      <div class="slide-content">
+
+        <span class="slide-tag">Análisis de Datos · Repo 1</span>
+        <h2 class="slide-title">Extracción desde YouTube API v3</h2>
+        <p class="slide-subtitle">
+          <code style="font-family:monospace; font-size:13px; color:var(--accent-mid);">YouTubeClient</code>
+          encapsula todas las llamadas a la API. Cada método corresponde a un endpoint distinto.
+        </p>
+
+        <pre><code><span class="kw">from</span> googleapiclient.discovery <span class="kw">import</span> build
+
+<span class="kw">class</span> <span class="cls">YouTubeClient</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>):
+        <span class="var">self</span>.youtube = build(<span class="str">"youtube"</span>, <span class="str">"v3"</span>, developerKey=<span class="var">api_key</span>)
+
+    <span class="kw">def</span> <span class="fn">get_channel_stats</span>(<span class="var">self</span>):           <span class="cm"># → suscriptores, vistas, videos</span>
+        <span class="kw">return</span> <span class="var">self</span>.youtube.channels().<span class="fn">list</span>(part=<span class="str">"statistics"</span>, id=<span class="var">channel_id</span>)
+
+    <span class="kw">def</span> <span class="fn">get_recent_video_ids</span>(<span class="var">self</span>):         <span class="cm"># → últimos 5 videos publicados</span>
+        <span class="kw">return</span> <span class="var">self</span>.youtube.search().<span class="fn">list</span>(part=<span class="str">"snippet"</span>, order=<span class="str">"date"</span>, ...)
+
+    <span class="kw">def</span> <span class="fn">get_all_video_ids</span>(<span class="var">self</span>):           <span class="cm"># → todos los videos via playlist uploads</span>
+        <span class="kw">return</span> <span class="var">self</span>.youtube.playlistItems().<span class="fn">list</span>(playlistId=<span class="var">uploads_id</span>, ...)
+
+    <span class="kw">def</span> <span class="fn">get_videos_details</span>(<span class="var">self</span>, <span class="var">video_ids</span>): <span class="cm"># → métricas por video</span>
+        <span class="kw">return</span> <span class="var">self</span>.youtube.videos().<span class="fn">list</span>(part=<span class="str">"snippet,statistics"</span>, ...)
+
+    <span class="kw">def</span> <span class="fn">get_all_playlists</span>(<span class="var">self</span>):            <span class="cm"># → playlists manuales del canal</span>
+        <span class="kw">return</span> <span class="var">self</span>.youtube.playlists().<span class="fn">list</span>(channelId=<span class="var">channel_id</span>, ...)</code></pre>
+
+        <div class="card card--accent" style="margin-top:16px;">
+          <div style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
+            <strong style="color:var(--text);">Por qué diario y semanal:</strong>
+            los datos de suscriptores y vistas del canal fluctúan diariamente — es útil tenerlos cada día.
+            Los metadatos de todos los videos y playlists no cambian tanto, pero sobre todo:
+            hacer todo diario aumentaría las llamadas a la API, que es el recurso más limitado y costoso.
+            La división minimiza el consumo de cuota de API y permite escalar el canal sin incurrir en costos adicionales.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 7 — ANÁLISIS DE DATOS · SERVICIO
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="6">
+      <div class="slide-content">
+
+        <span class="slide-tag">Análisis de Datos · Repo 2</span>
+        <h2 class="slide-title">Vistas SQL que responden las preguntas de negocio</h2>
+        <p class="slide-subtitle">
+          Sobre las tablas raw de BigQuery se crean vistas SQL. Cada vista responde una pregunta de negocio específica
+          y su resultado se exporta como JSON a Cloud Storage.
+        </p>
+
+        <div class="card" style="margin-bottom:16px; overflow:hidden;">
+          <table>
+            <thead>
+              <tr>
+                <th>Vista en BigQuery</th>
+                <th>Pregunta que responde</th>
+                <th>Frecuencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>view-channel-growth-daily</td><td>Crecimiento acumulado del canal día a día</td><td>Diaria</td></tr>
+              <tr><td>latest_videos_current</td><td>Métricas actuales de los 5 videos más recientes</td><td>Diaria</td></tr>
+              <tr><td>view-playlist-growth-weekly</td><td>Vistas/likes/comentarios ganados por playlist esta semana</td><td>Semanal</td></tr>
+              <tr><td>view-video-growth-weekly</td><td>Vistas/likes/comentarios ganados por video esta semana</td><td>Semanal</td></tr>
+              <tr><td>view-playlist-weekly-evolution</td><td>Evolución histórica de playlists semana a semana</td><td>Semanal</td></tr>
+              <tr><td>view-video-weekly-evolution-relevant</td><td>Evolución histórica de videos relevantes</td><td>Semanal</td></tr>
+              <tr><td>view-all-playlist-videos-weekly</td><td>Qué videos pertenecen a qué playlist cada semana</td><td>Semanal</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code><span class="cm"># StorageRepository: exporta el resultado de cada vista a Cloud Storage</span>
+<span class="kw">def</span> <span class="fn">upload_dataframe_as_json</span>(<span class="var">self</span>, <span class="var">dataframe</span>, <span class="var">filename</span>, <span class="var">max_age</span>=<span class="str">14400</span>):
+    <span class="var">json_data</span> = <span class="var">dataframe</span>.<span class="fn">to_json</span>(orient=<span class="str">"records"</span>, date_format=<span class="str">"iso"</span>)
+    <span class="var">blob</span>.cache_control = <span class="str">f"public, max-age=<span class="var">{max_age}</span>"</span>  <span class="cm"># 4h daily · 12h weekly</span>
+    <span class="var">blob</span>.<span class="fn">upload_from_string</span>(<span class="var">json_data</span>, content_type=<span class="str">"application/json"</span>)</code></pre>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 8 — RESULTADOS
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="7">
+      <div class="slide-content">
+
+        <span class="slide-tag">Resultados</span>
+        <h2 class="slide-title">Un dashboard automatizado en producción</h2>
+        <p class="slide-subtitle">
+          El resultado no es un análisis puntual, sino una infraestructura que corre automáticamente
+          y mantiene el dashboard actualizado con datos frescos cada día.
+        </p>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card card--success">
+            <div style="font-size:13px; font-weight:700; color:var(--success); margin-bottom:10px;">Pipeline automatizado</div>
+            <ul class="check-list">
+              <li><span>✓</span><span>ETL diario a las 2:00 AM UTC (Cloud Scheduler)</span></li>
+              <li><span>✓</span><span>ETL semanal los lunes a las 2:30 AM UTC</span></li>
+              <li><span>✓</span><span>Servicio de datos 1h después del ETL</span></li>
+              <li><span>✓</span><span>Reintentos automáticos configurados (máx. 3)</span></li>
+            </ul>
+          </div>
+          <div class="card card--success">
+            <div style="font-size:13px; font-weight:700; color:var(--success); margin-bottom:10px;">Infraestructura low-cost</div>
+            <ul class="check-list">
+              <li><span>✓</span><span>Cloud Functions serverless (0 instancias en reposo)</span></li>
+              <li><span>✓</span><span>Cloud Storage como "API" estática sin servidor</span></li>
+              <li><span>✓</span><span>Dashboard estático en GitHub Pages (gratuito)</span></li>
+              <li><span>✓</span><span>BigQuery con dataset público accesible a cualquiera</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card" style="text-align:center; padding:24px 16px;">
+            <div style="font-size:30px; font-weight:700; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">7</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Endpoints JSON públicos</div>
+          </div>
+          <div class="card" style="text-align:center; padding:24px 16px;">
+            <div style="font-size:30px; font-weight:700; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">8</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Tablas históricas en BigQuery</div>
+          </div>
+          <div class="card" style="text-align:center; padding:24px 16px;">
+            <div style="font-size:30px; font-weight:700; background:var(--gradient); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">365+</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Snapshots acumulados al año</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 9 — RECOMENDACIONES
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="8">
+      <div class="slide-content">
+
+        <span class="slide-tag">Recomendaciones · Puntos Críticos</span>
+        <h2 class="slide-title">Lo que hay que tener en cuenta para mantener el pipeline</h2>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <div class="card card--warn">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div class="ibadge" style="background:linear-gradient(var(--card-bg),var(--card-bg)) padding-box, linear-gradient(var(--danger),var(--danger)) border-box; flex-shrink:0; margin-top:2px;">!</div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">El semanal no puede romperse</div>
+                <div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">Las tablas de tipo <em>snapshot</em> acumulan histórico semana a semana. Si el scheduler falla y no se recupera, se pierde esa semana del historial. El histórico no se puede reconstruir: es irrecuperable.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--warn">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div class="ibadge" style="background:linear-gradient(var(--card-bg),var(--card-bg)) padding-box, linear-gradient(var(--danger),var(--danger)) border-box; flex-shrink:0; margin-top:2px;">!</div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">Separar lo que puede cambiarse de lo que no</div>
+                <div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+                  <strong style="color:var(--text);">Se puede editar:</strong> las queries SQL del Repo 2 (vistas analíticas, nuevas columnas calculadas, filtros).<br>
+                  <strong style="color:var(--danger);">No se puede editar sin cuidado:</strong> el código que construye los snapshots en el Repo 1. Cambiar la estructura de esas tablas sin migración puede romper todo el histórico acumulado.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div class="ibadge" style="flex-shrink:0; margin-top:2px;">▸</div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">Las definiciones iniciales son contratos</div>
+                <div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">El esquema de las tablas de snapshot, la granularidad y las claves de idempotencia están definidas desde el inicio. Agregar un nuevo análisis es fácil. Cambiar la estructura de una tabla existente requiere migración y puede afectar a los datos históricos ya acumulados.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <div class="ibadge" style="flex-shrink:0; margin-top:2px;">▸</div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">Monitorizar el Cloud Scheduler y las Cloud Functions</div>
+                <div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">Los schedulers están configurados con reintentos automáticos, pero conviene revisar periódicamente los logs en Cloud Functions para detectar fallos silenciosos, especialmente si se hacen cambios en las queries o en las dependencias del proyecto.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 10 — PRÓXIMOS PASOS
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="9">
+      <div class="slide-content">
+
+        <span class="slide-tag">Próximos Pasos</span>
+        <h2 class="slide-title">Evolución del proyecto</h2>
+        <p class="slide-subtitle">
+          La arquitectura está diseñada para escalar por capas. Agregar un nuevo análisis
+          implica crear una vista en BigQuery y un nuevo endpoint JSON, sin tocar el ETL.
+        </p>
+
+        <div class="grid-2">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Nuevos análisis</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Tasa de engagement por video</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Ratio likes/vistas y comentarios/vistas como métrica de calidad de contenido</div>
+              </div>
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Velocidad de crecimiento inicial</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Métricas de las primeras 4 semanas de un video nuevo</div>
+              </div>
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Comparativa de rendimiento entre playlists</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Qué categoría de contenido genera más engagement sostenido</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Infraestructura</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Alertas automáticas</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Notificación por email si un Cloud Function falla</div>
+              </div>
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Looker Studio / Power BI</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Conectar directamente al dataset público de BigQuery para exploración ad-hoc</div>
+              </div>
+              <div class="card">
+                <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:4px;">Expansión del dataset público</div>
+                <div style="font-size:12px; color:var(--text-secondary);">Más datos históricos disponibles para la comunidad</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════
+         SLIDE 11 — CIERRE
+         ══════════════════════════════════════════ -->
+    <div class="slide" data-index="10">
+      <div class="slide-content" style="text-align:center; max-width:700px;">
+
+        <div class="portada-label" style="display:inline-flex;">
+          <span class="portada-dot"></span>
+          Proyecto en producción
+        </div>
+
+        <h2 class="slide-title" style="font-size:clamp(30px,4vw,48px); margin-top:8px;">
+          Pipeline activo,<br><span class="gradient-text">datos frescos cada día</span>
+        </h2>
+
+        <p class="portada-desc" style="margin:0 auto 32px;">
+          El dashboard muestra datos reales del canal actualizados automáticamente.
+          El dataset de BigQuery es público y está disponible para practicar SQL
+          con datos reales de un canal de YouTube.
+        </p>
+
+        <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:48px;">
+          <a href="https://angelgarciadatablog.com/youtube-insights-dashboard" target="_blank" class="btn-outline">
+            Ver Dashboard en vivo →
+          </a>
+          <a href="https://console.cloud.google.com/bigquery?ws=!1m4!1m3!3m2!1syoutube-datasets-360!2sangelgarciadatablog" target="_blank" class="btn-outline">
+            Dataset público en BigQuery →
+          </a>
+        </div>
+
+        <div class="portada-meta" style="justify-content:center; padding-top:32px; border-top:1px solid var(--border);">
+          <div class="portada-meta-item" style="align-items:center;">
+            <span class="portada-meta-value">Angel Garcia</span>
+            <div style="display:flex; gap:16px; margin-top:6px;">
+              <a href="https://angelgarciadatablog.com" target="_blank" style="font-size:13px; color:var(--text-secondary);">angelgarciadatablog.com</a>
+              <a href="https://www.linkedin.com/in/angelgarciachanga" target="_blank" style="font-size:13px; color:var(--text-secondary);">LinkedIn</a>
+              <a href="https://github.com/angelgarciachanga" target="_blank" style="font-size:13px; color:var(--text-secondary);">GitHub</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /slides-container -->
+
+
+  <!-- NAVEGACIÓN -->
+  <div class="nav-arrows">
+    <button class="nav-btn" id="btn-prev" disabled aria-label="Anterior">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="nav-dots" id="nav-dots"></div>
+    <button class="nav-btn" id="btn-next" aria-label="Siguiente">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <div class="slide-footer-line"></div>
+
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const dotsContainer = document.getElementById('nav-dots');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const counterCurrent = document.getElementById('counter-current');
+    const counterTotal = document.getElementById('counter-total');
+
+    let current = 0;
+    const total = slides.length;
+
+    counterTotal.textContent = total;
+
+    // Build dots
+    slides.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', () => goTo(i));
+      dotsContainer.appendChild(dot);
+    });
+
+    function goTo(index) {
+      if (index < 0 || index >= total) return;
+
+      const dots = document.querySelectorAll('.nav-dot');
+
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+
+      current = index;
+
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+
+      counterCurrent.textContent = current + 1;
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === total - 1;
+    }
+
+    btnPrev.addEventListener('click', () => goTo(current - 1));
+    btnNext.addEventListener('click', () => goTo(current + 1));
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+    });
+  </script>
+
+</body>
+</html>
