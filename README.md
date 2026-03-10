@@ -27,7 +27,13 @@ youtube-insights-dashboard      ← Este repo: consume los JSON y los visualiza
 
 ### Por qué existe este proyecto
 
-El dashboard nativo de YouTube Analytics no muestra los datos de la forma que necesitaba. El crecimiento de vistas, por ejemplo, solo permite comparar la semana actual contra la anterior, sin histórico acumulado ni contexto por playlist o video. Este proyecto nació para resolver eso: tener visibilidad real del canal con las preguntas de negocio que importan, no las que YouTube decide mostrar.
+Uso YouTube Studio a diario, pero hay cosas que simplemente no puedo ver desde ahí. No es que la herramienta esté rota, es que no me muestra lo que yo necesito ver.
+
+**1. No puedo ver playlists y videos juntos.** YouTube Studio los separa. Lo que yo quiero hacer es partir de una pregunta jerárquica: primero, ¿qué playlist está funcionando mejor? Y luego, ¿qué videos de esa playlist son los que más contribuyen a ese resultado? Esa navegación de playlist → video no existe en YouTube Studio.
+
+**2. No puedo hacer comparativas semanales.** Tiene un gráfico de líneas con la evolución diaria de vistas, pero no hay nada que me diga si esta semana estoy mejor o peor que la semana anterior. Las tarjetas de métricas usan rangos fijos como "últimos 28 días", y los gráficos son diarios, no semanales. No hay un comparativo semana vs semana para videos ni para playlists.
+
+Este proyecto nació para ver exactamente eso: la evolución semanal del canal, desglosada por playlist y por video.
 
 ### Por qué tres repositorios separados
 
@@ -48,6 +54,23 @@ Además, cada repositorio representa un aprendizaje específico:
 La parte técnica —Cloud Functions, Cloud Scheduler, Cloud Storage, consumo de APIs— fue nueva y requirió aprendizaje. Pero el reto más importante no fue técnico: fue aprender a formular adecuadamente las preguntas de negocio.
 
 No se trata solo de escribir queries SQL o generar gráficos. Primero hay que saber qué quieres entender del canal, luego traducirlo en una query que lo responda, y finalmente decidir cuál es la mejor forma de visualizarlo. Ese proceso —de la pregunta al dato, del dato al gráfico— es lo que estructura todo el proyecto.
+
+Las preguntas concretas que guían el análisis:
+
+**Canal — visión general**
+- ¿Cuántas vistas ganó el canal esta semana vs la semana anterior?
+
+**Drill-down: Canal → Playlist → Video**
+- ¿Qué playlist generó más vistas esta semana?
+- ¿Qué videos de esa playlist son los que más contribuyeron?
+
+**Comparativa semanal**
+- ¿Cómo evoluciona el rendimiento de cada playlist semana a semana a lo largo del tiempo?
+- ¿Cómo evoluciona cada video semana a semana?
+
+**Cruce de métricas**
+- Si una semana tuve un pico de vistas, ¿qué playlist lo explica? ¿Esa misma playlist generó proporcionalmente más likes y comentarios?
+- ¿Los videos y playlists con mayor engagement (likes, comentarios) son también los que más vistas acumulan, o hay contenido con alto engagement y pocas vistas?
 
 ---
 

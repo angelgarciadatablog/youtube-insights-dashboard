@@ -334,7 +334,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
     }
     .pipeline-node {
       background: var(--card-bg);
@@ -345,6 +345,7 @@
       font-weight: 600;
       color: var(--text);
       position: relative;
+      white-space: nowrap;
     }
     .pipeline-node::before {
       content: '';
@@ -443,6 +444,51 @@
     }
 
     /* ============================================================
+       REPO LINKS
+       ============================================================ */
+    .repo-links {
+      margin-bottom: 32px;
+    }
+    .repo-links-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+    .repo-links-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .repo-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .repo-link:hover {
+      color: var(--text);
+      border-color: var(--accent-mid);
+      background: #1f1f1f;
+    }
+    .repo-link svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .repo-link:hover svg { opacity: 1; }
+
+    /* ============================================================
        BUTTONS
        ============================================================ */
     .btn-outline {
@@ -504,6 +550,7 @@
     }
     td:first-child { color: var(--text); font-weight: 500; font-family: "SF Mono","Fira Code",monospace; font-size: 12px; }
     tr:last-child td { border-bottom: none; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* ============================================================
        MOBILE — scroll vertical
@@ -532,7 +579,9 @@
       .nav-arrows { position: fixed; bottom: 20px; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .portada-meta { gap: 24px; }
-      .pipeline-row { flex-direction: column; align-items: flex-start; }
+      .pipeline-row { flex-direction: column; align-items: center; }
+      .pipeline-arrow { font-size: 0; }
+      .pipeline-arrow::after { content: '↓'; font-size: 18px; }
     }
   </style>
 </head>
@@ -585,22 +634,40 @@
           </a>
         </div>
 
-        <div class="portada-meta">
-          <div class="portada-meta-item">
-            <span class="portada-meta-value">3</span>
-            <span class="portada-meta-label">Repositorios</span>
+        <div class="repo-links">
+          <span class="repo-links-label">Repositorios</span>
+          <div class="repo-links-row">
+            <a href="https://github.com/angelgarciachanga/youtube-v3-data-pipeline" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-v3-data-pipeline
+            </a>
+            <a href="https://github.com/angelgarciachanga/youtube-analytics-data-service" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-analytics-data-service
+            </a>
+            <a href="https://github.com/angelgarciachanga/youtube-insights-dashboard" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-insights-dashboard
+            </a>
           </div>
+        </div>
+
+        <div class="portada-meta">
           <div class="portada-meta-item">
             <span class="portada-meta-value">8</span>
             <span class="portada-meta-label">Tablas en BigQuery</span>
           </div>
           <div class="portada-meta-item">
-            <span class="portada-meta-value">7</span>
+            <span class="portada-meta-value">7+</span>
             <span class="portada-meta-label">Endpoints JSON</span>
           </div>
           <div class="portada-meta-item">
             <span class="portada-meta-value">2×</span>
             <span class="portada-meta-label">Ejecuciones diarias</span>
+          </div>
+          <div class="portada-meta-item">
+            <span class="portada-meta-value">100%</span>
+            <span class="portada-meta-label">Serverless</span>
           </div>
         </div>
 
@@ -615,35 +682,34 @@
       <div class="slide-content">
 
         <span class="slide-tag">Observación · Contexto</span>
-        <h2 class="slide-title">El problema con YouTube Analytics</h2>
+        <h2 class="slide-title">Lo que no puedo ver en YouTube Studio</h2>
         <p class="slide-subtitle">
-          El dashboard nativo de YouTube no muestra los datos con el nivel de detalle necesario.
+          Uso YouTube Studio a diario, pero no me muestra lo que necesito ver. Dos problemas concretos motivaron este proyecto.
         </p>
 
         <div class="grid-2" style="margin-bottom:20px;">
           <div class="card card--warn">
-            <div style="font-size:13px; font-weight:700; color:var(--danger); margin-bottom:10px;">Lo que YouTube Analytics muestra</div>
-            <ul class="check-list">
-              <li><span>✕</span><span>Crecimiento de vistas solo semana actual vs anterior</span></li>
-              <li><span>✕</span><span>Sin histórico acumulado configurable</span></li>
-              <li><span>✕</span><span>Sin contexto por playlist</span></li>
-              <li><span>✕</span><span>Sin vista comparativa semana a semana a lo largo del tiempo</span></li>
-            </ul>
+            <div style="font-size:13px; font-weight:700; color:var(--danger); margin-bottom:10px;">① Playlists y videos por separado</div>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
+              YouTube Studio los muestra de forma independiente. Lo que yo necesito es navegar de forma jerárquica:
+              primero saber <strong style="color:var(--text);">qué playlist funciona mejor</strong>,
+              y luego ver <strong style="color:var(--text);">qué videos de esa playlist</strong> son los que más contribuyen.
+              Esa relación no existe ahí.
+            </p>
           </div>
-          <div class="card card--success">
-            <div style="font-size:13px; font-weight:700; color:var(--success); margin-bottom:10px;">Lo que este proyecto responde</div>
-            <ul class="check-list">
-              <li><span>✓</span><span>Histórico acumulado con filtro de fechas libre</span></li>
-              <li><span>✓</span><span>Rendimiento por playlist y video semana a semana</span></li>
-              <li><span>✓</span><span>Evolución comparativa de múltiples playlists</span></li>
-              <li><span>✓</span><span>Datos propios, controlados, en cualquier formato</span></li>
-            </ul>
+          <div class="card card--warn">
+            <div style="font-size:13px; font-weight:700; color:var(--danger); margin-bottom:10px;">② Sin comparativa semanal</div>
+            <p style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
+              Tiene gráficos de evolución diaria, pero no hay nada que me diga si
+              <strong style="color:var(--text);">esta semana estoy mejor o peor que la anterior</strong>
+              por video o por playlist. Los rangos son fijos ("últimos 28 días") y no hay vista semana vs semana.
+            </p>
           </div>
         </div>
 
         <div class="card card--accent">
           <div style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
-            <strong style="color:var(--text);">La oportunidad:</strong> construir una herramienta propia de análisis usando la YouTube Data API v3, con infraestructura serverless de bajo costo, que responda exactamente las preguntas de negocio que importan para entender el canal.
+            <strong style="color:var(--text);">La solución:</strong> construir una herramienta propia que muestre exactamente eso — la evolución semanal del canal, desglosada por playlist y por video.
           </div>
         </div>
 
@@ -657,28 +723,27 @@
     <div class="slide" data-index="2">
       <div class="slide-content">
 
-        <span class="slide-tag">Planteamiento del Problema · Objetivos</span>
-        <h2 class="slide-title">Preguntas de negocio que guían el proyecto</h2>
+        <span class="slide-tag">Objetivos · Preguntas de negocio</span>
+        <h2 class="slide-title">Preguntas que guían el análisis</h2>
         <p class="slide-subtitle">
-          El enfoque no es hacer Business Intelligence con un modelo relacional,
-          sino escribir queries SQL que respondan preguntas concretas del canal.
+          El punto de partida no es el dato sino la pregunta. Cada sección del dashboard responde algo concreto.
         </p>
 
         <div class="grid-2" style="margin-bottom:20px;">
           <div class="card">
-            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Canal</div>
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Canal → Playlist → Video</div>
             <ul class="check-list">
-              <li><span>▸</span><span>¿Cómo ha crecido el número de suscriptores mes a mes?</span></li>
-              <li><span>▸</span><span>¿Cuál es la tendencia acumulada de vistas del canal?</span></li>
-              <li><span>▸</span><span>¿Qué tan rápido crece un video nuevo en sus primeras semanas?</span></li>
+              <li><span>▸</span><span>¿Cuántas vistas ganó el canal esta semana vs la anterior?</span></li>
+              <li><span>▸</span><span>¿Qué playlist generó más vistas esta semana?</span></li>
+              <li><span>▸</span><span>¿Qué videos de esa playlist son los que más contribuyeron?</span></li>
             </ul>
           </div>
           <div class="card">
-            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Videos & Playlists</div>
+            <div style="font-size:12px; font-weight:700; color:var(--accent-mid); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px;">Comparativa y cruce de métricas</div>
             <ul class="check-list">
-              <li><span>▸</span><span>¿Cuáles son los videos con mayor crecimiento de vistas semana a semana?</span></li>
-              <li><span>▸</span><span>¿Qué playlist acumula más engagement en la última semana?</span></li>
-              <li><span>▸</span><span>¿Qué videos entraron o salieron de una playlist recientemente?</span></li>
+              <li><span>▸</span><span>¿Cómo evoluciona cada playlist y cada video semana a semana?</span></li>
+              <li><span>▸</span><span>Si hubo un pico de vistas, ¿qué playlist lo explica y generó el mismo engagement?</span></li>
+              <li><span>▸</span><span>¿El contenido con más likes y comentarios es también el de más vistas?</span></li>
             </ul>
           </div>
         </div>
@@ -687,9 +752,7 @@
           <div style="display:flex; gap:12px; align-items:flex-start;">
             <div class="ibadge" style="margin-top:2px; flex-shrink:0;">◆</div>
             <div style="font-size:14px; color:var(--text-secondary); line-height:1.7;">
-              <strong style="color:var(--text);">Proceso real:</strong> primero se define qué se quiere entender del canal,
-              luego se traduce a una query SQL, y finalmente se decide cómo visualizarlo.
-              De la pregunta al dato, del dato al gráfico.
+              <strong style="color:var(--text);">De la pregunta al dato, del dato al gráfico.</strong> Primero se define qué se quiere entender, luego se traduce a una query SQL, y finalmente se decide cómo visualizarlo.
             </div>
           </div>
         </div>
@@ -712,7 +775,7 @@
         </p>
 
         <div style="margin-bottom:20px;">
-          <div class="card" style="margin-bottom:12px; overflow:hidden;">
+          <div class="card table-scroll" style="margin-bottom:12px;">
             <table>
               <thead>
                 <tr>
@@ -848,26 +911,23 @@
           encapsula todas las llamadas a la API. Cada método corresponde a un endpoint distinto.
         </p>
 
-        <pre><code><span class="kw">from</span> googleapiclient.discovery <span class="kw">import</span> build
-
-<span class="kw">class</span> <span class="cls">YouTubeClient</span>:
+        <pre><code><span class="kw">class</span> <span class="cls">YouTubeClient</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>):
         <span class="var">self</span>.youtube = build(<span class="str">"youtube"</span>, <span class="str">"v3"</span>, developerKey=<span class="var">api_key</span>)
 
-    <span class="kw">def</span> <span class="fn">get_channel_stats</span>(<span class="var">self</span>):           <span class="cm"># → suscriptores, vistas, videos</span>
-        <span class="kw">return</span> <span class="var">self</span>.youtube.channels().<span class="fn">list</span>(part=<span class="str">"statistics"</span>, id=<span class="var">channel_id</span>)
+    <span class="cm"># — independientes ────────────────────────────────────────────</span>
+    <span class="kw">def</span> <span class="fn">get_channel_stats</span>(<span class="var">self</span>):                  <span class="cm"># suscriptores, vistas totales, nº videos</span>
+    <span class="kw">def</span> <span class="fn">get_channel_snippet</span>(<span class="var">self</span>):                <span class="cm"># metadata del canal (título, país, thumbnail…)</span>
+    <span class="kw">def</span> <span class="fn">get_recent_video_ids</span>(<span class="var">self</span>, max_results=5): <span class="cm"># IDs de los N videos más recientes</span>
 
-    <span class="kw">def</span> <span class="fn">get_recent_video_ids</span>(<span class="var">self</span>):         <span class="cm"># → últimos 5 videos publicados</span>
-        <span class="kw">return</span> <span class="var">self</span>.youtube.search().<span class="fn">list</span>(part=<span class="str">"snippet"</span>, order=<span class="str">"date"</span>, ...)
+    <span class="cm"># — cadena de uploads ─────────────────────────────────────────</span>
+    <span class="kw">def</span> <span class="fn">get_uploads_playlist_id</span>(<span class="var">self</span>):            <span class="cm"># ID de la playlist de uploads (la crea YouTube)</span>
+    <span class="kw">def</span> <span class="fn">get_all_video_ids</span>(<span class="var">self</span>):                  <span class="cm"># todos los IDs del canal (usa uploads_id, pagina)</span>
+    <span class="kw">def</span> <span class="fn">get_videos_details</span>(<span class="var">self</span>, <span class="var">video_ids</span>):      <span class="cm"># snippet + estadísticas + duración por video</span>
 
-    <span class="kw">def</span> <span class="fn">get_all_video_ids</span>(<span class="var">self</span>):           <span class="cm"># → todos los videos via playlist uploads</span>
-        <span class="kw">return</span> <span class="var">self</span>.youtube.playlistItems().<span class="fn">list</span>(playlistId=<span class="var">uploads_id</span>, ...)
-
-    <span class="kw">def</span> <span class="fn">get_videos_details</span>(<span class="var">self</span>, <span class="var">video_ids</span>): <span class="cm"># → métricas por video</span>
-        <span class="kw">return</span> <span class="var">self</span>.youtube.videos().<span class="fn">list</span>(part=<span class="str">"snippet,statistics"</span>, ...)
-
-    <span class="kw">def</span> <span class="fn">get_all_playlists</span>(<span class="var">self</span>):            <span class="cm"># → playlists manuales del canal</span>
-        <span class="kw">return</span> <span class="var">self</span>.youtube.playlists().<span class="fn">list</span>(channelId=<span class="var">channel_id</span>, ...)</code></pre>
+    <span class="cm"># — cadena de playlists ───────────────────────────────────────</span>
+    <span class="kw">def</span> <span class="fn">get_all_playlists</span>(<span class="var">self</span>):                  <span class="cm"># todas las playlists del canal (pagina)</span>
+    <span class="kw">def</span> <span class="fn">get_playlist_items</span>(<span class="var">self</span>, <span class="var">playlist_id</span>):    <span class="cm"># videos de una playlist (pagina)</span></code></pre>
 
         <div class="card card--accent" style="margin-top:16px;">
           <div style="font-size:13px; color:var(--text-secondary); line-height:1.7;">
@@ -896,7 +956,7 @@
           y su resultado se exporta como JSON a Cloud Storage.
         </p>
 
-        <div class="card" style="margin-bottom:16px; overflow:hidden;">
+        <div class="card table-scroll" style="margin-bottom:16px;">
           <table>
             <thead>
               <tr>
@@ -906,22 +966,28 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td>view-channel-growth-daily</td><td>Crecimiento acumulado del canal día a día</td><td>Diaria</td></tr>
-              <tr><td>latest_videos_current</td><td>Métricas actuales de los 5 videos más recientes</td><td>Diaria</td></tr>
-              <tr><td>view-playlist-growth-weekly</td><td>Vistas/likes/comentarios ganados por playlist esta semana</td><td>Semanal</td></tr>
-              <tr><td>view-video-growth-weekly</td><td>Vistas/likes/comentarios ganados por video esta semana</td><td>Semanal</td></tr>
-              <tr><td>view-playlist-weekly-evolution</td><td>Evolución histórica de playlists semana a semana</td><td>Semanal</td></tr>
-              <tr><td>view-video-weekly-evolution-relevant</td><td>Evolución histórica de videos relevantes</td><td>Semanal</td></tr>
-              <tr><td>view-all-playlist-videos-weekly</td><td>Qué videos pertenecen a qué playlist cada semana</td><td>Semanal</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-channel-growth-daily" target="_blank" style="color:var(--accent-mid);">view-channel-growth-daily</a></td><td>Crecimiento acumulado del canal día a día</td><td>Diaria</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3slatest_videos_current" target="_blank" style="color:var(--accent-mid);">latest_videos_current</a></td><td>Métricas actuales de los 5 videos más recientes</td><td>Diaria</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-playlist-growth-weekly" target="_blank" style="color:var(--accent-mid);">view-playlist-growth-weekly</a></td><td>Vistas/likes/comentarios ganados por playlist esta semana</td><td>Semanal</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-video-growth-weekly" target="_blank" style="color:var(--accent-mid);">view-video-growth-weekly</a></td><td>Vistas/likes/comentarios ganados por video esta semana</td><td>Semanal</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-playlist-weekly-evolution" target="_blank" style="color:var(--accent-mid);">view-playlist-weekly-evolution</a></td><td>Evolución histórica de playlists semana a semana</td><td>Semanal</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-video-weekly-evolution-relevant" target="_blank" style="color:var(--accent-mid);">view-video-weekly-evolution-relevant</a></td><td>Evolución histórica de videos relevantes</td><td>Semanal</td></tr>
+              <tr><td><a href="https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1syoutube-datasets-360!2sangelgarciadatablog!3sview-all-playlist-videos-weekly" target="_blank" style="color:var(--accent-mid);">view-all-playlist-videos-weekly ↗</a></td><td>Videos + playlists cruzados con métricas semanales</td><td>Semanal</td></tr>
             </tbody>
           </table>
         </div>
 
-        <pre><code><span class="cm"># StorageRepository: exporta el resultado de cada vista a Cloud Storage</span>
-<span class="kw">def</span> <span class="fn">upload_dataframe_as_json</span>(<span class="var">self</span>, <span class="var">dataframe</span>, <span class="var">filename</span>, <span class="var">max_age</span>=<span class="str">14400</span>):
-    <span class="var">json_data</span> = <span class="var">dataframe</span>.<span class="fn">to_json</span>(orient=<span class="str">"records"</span>, date_format=<span class="str">"iso"</span>)
-    <span class="var">blob</span>.cache_control = <span class="str">f"public, max-age=<span class="var">{max_age}</span>"</span>  <span class="cm"># 4h daily · 12h weekly</span>
-    <span class="var">blob</span>.<span class="fn">upload_from_string</span>(<span class="var">json_data</span>, content_type=<span class="str">"application/json"</span>)</code></pre>
+        <div class="card card--accent">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+              <strong style="color:var(--text);">Dataset público en BigQuery.</strong>
+              Cada vista es accesible — puedes ver la SQL, ejecutarla y explorar los datos reales del canal.
+            </div>
+            <a href="https://console.cloud.google.com/bigquery?ws=!1m4!1m3!3m2!1syoutube-datasets-360!2sangelgarciadatablog" target="_blank" class="btn-outline" style="white-space:nowrap; flex-shrink:0;">
+              Explorar vistas en BigQuery →
+            </a>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -947,7 +1013,6 @@
               <li><span>✓</span><span>ETL diario a las 2:00 AM UTC (Cloud Scheduler)</span></li>
               <li><span>✓</span><span>ETL semanal los lunes a las 2:30 AM UTC</span></li>
               <li><span>✓</span><span>Servicio de datos 1h después del ETL</span></li>
-              <li><span>✓</span><span>Reintentos automáticos configurados (máx. 3)</span></li>
             </ul>
           </div>
           <div class="card card--success">
@@ -1115,13 +1180,31 @@
           con datos reales de un canal de YouTube.
         </p>
 
-        <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:48px;">
+        <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:32px;">
           <a href="https://angelgarciadatablog.com/youtube-insights-dashboard" target="_blank" class="btn-outline">
             Ver Dashboard en vivo →
           </a>
           <a href="https://console.cloud.google.com/bigquery?ws=!1m4!1m3!3m2!1syoutube-datasets-360!2sangelgarciadatablog" target="_blank" class="btn-outline">
             Dataset público en BigQuery →
           </a>
+        </div>
+
+        <div class="repo-links" style="justify-content:center; display:flex; flex-direction:column; align-items:center; margin-bottom:32px;">
+          <span class="repo-links-label">Repositorios</span>
+          <div class="repo-links-row" style="justify-content:center;">
+            <a href="https://github.com/angelgarciachanga/youtube-v3-data-pipeline" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-v3-data-pipeline
+            </a>
+            <a href="https://github.com/angelgarciachanga/youtube-analytics-data-service" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-analytics-data-service
+            </a>
+            <a href="https://github.com/angelgarciachanga/youtube-insights-dashboard" target="_blank" class="repo-link">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              youtube-insights-dashboard
+            </a>
+          </div>
         </div>
 
         <div class="portada-meta" style="justify-content:center; padding-top:32px; border-top:1px solid var(--border);">
