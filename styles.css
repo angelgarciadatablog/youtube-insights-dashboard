@@ -1086,3 +1086,63 @@ a:hover { color: var(--text); }
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+/* ============================================================
+   AUTH OVERLAY — puerta de login (bucket privado)
+   ============================================================ */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-overlay.hidden {
+  display: none;
+}
+
+.auth-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 48px 40px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.auth-title {
+  font-size: 28px;
+  color: var(--text);
+  margin: 0;
+}
+
+.auth-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.auth-btn {
+  background: var(--gradient);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-btn:hover {
+  background: var(--gradient-hover);
+}

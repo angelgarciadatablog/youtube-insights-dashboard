@@ -2,6 +2,75 @@
    YouTube Insights Dashboard — app.js
    ============================================================ */
 
+// ============================================================
+// AUTH — bucket privado: cada visitante entra con su cuenta Google
+// (el Client ID es público por diseño; el acceso lo decide IAM)
+// ============================================================
+const GOOGLE_CLIENT_ID = '1052480639778-d6kak96cpjk33pkgluhvtjpecmcf58mb.apps.googleusercontent.com';
+const GCS_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_only';
+
+let accessToken = null;
+let tokenClient = null;
+let dashboardStarted = false;
+
+// fetch con el token del visitante; 401/403 = sin acceso o sesión vencida
+async function authFetch(url) {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (res.status === 401 || res.status === 403) {
+    showAuthOverlay('Tu cuenta no tiene acceso a los datos o la sesión expiró. Vuelve a iniciar sesión.');
+  }
+  return res;
+}
+
+function setupAuth() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GCS_SCOPE,
+    callback: (resp) => {
+      if (resp.error) {
+        showAuthOverlay('No se pudo iniciar sesión. Intenta de nuevo.');
+        return;
+      }
+      accessToken = resp.access_token;
+      hideAuthOverlay();
+      startDashboard();
+    },
+  });
+  document.getElementById('auth-login-btn').addEventListener('click', () => {
+    tokenClient.requestAccessToken();
+  });
+}
+
+function showAuthOverlay(mensaje) {
+  if (mensaje) document.getElementById('auth-message').textContent = mensaje;
+  document.getElementById('auth-overlay').classList.remove('hidden');
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+}
+
+function startDashboard() {
+  if (dashboardStarted) return;
+  dashboardStarted = true;
+  init();
+  initWeekly();
+  initHistorico();
+}
+
+// la librería GIS carga async; esperar a que esté disponible
+function waitForGis(intentos = 0) {
+  if (window.google && google.accounts && google.accounts.oauth2) {
+    setupAuth();
+    return;
+  }
+  if (intentos > 50) {
+    showAuthOverlay('No se pudo cargar Google Sign-In. Recarga la página.');
+    return;
+  }
+  setTimeout(() => waitForGis(intentos + 1), 100);
+}
+
 const DATA_URL = 'https://storage.googleapis.com/angelgarciadatablog-analytics/daily/view-channel-growth-daily.json';
 
 // Chart instances (kept for destroy/re-render on filter)
@@ -17,7 +86,7 @@ let allData = [];
 // ============================================================
 async function init() {
   try {
-    const res = await fetch(DATA_URL);
+    const res = await authFetch(DATA_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
 
@@ -550,7 +619,7 @@ let chartWeeklyVideoViews = null;
 
 async function initWeekly() {
   try {
-    const res = await fetch(WEEKLY_DATA_URL);
+    const res = await authFetch(WEEKLY_DATA_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
     weeklyAllData = raw.slice().sort((a, b) => new Date(a.snapshot_date) - new Date(b.snapshot_date));
@@ -1063,7 +1132,7 @@ let histVidSort            = { col: 'views_acum', dir: 'desc' };
 
 async function initHistorico() {
   try {
-    const [plRes, vidRes] = await Promise.all([fetch(HISTORICO_PLAYLIST_URL), fetch(HISTORICO_VIDEO_URL)]);
+    const [plRes, vidRes] = await Promise.all([authFetch(HISTORICO_PLAYLIST_URL), authFetch(HISTORICO_VIDEO_URL)]);
     if (!plRes.ok || !vidRes.ok) throw new Error('HTTP error');
     const [plRaw, vidRaw] = await Promise.all([plRes.json(), vidRes.json()]);
 
@@ -1429,8 +1498,6 @@ function initHistoricoVideoMetricToggle() {
 }
 
 // ============================================================
-// START
+// START — el dashboard arranca recién después del login
 // ============================================================
-init();
-initWeekly();
-initHistorico();
+waitForGis();
