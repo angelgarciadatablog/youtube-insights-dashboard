@@ -1,6 +1,6 @@
 # YouTube Insights Dashboard
 
-Dashboard web estático que visualiza el rendimiento de un canal de YouTube en tiempo real. Consume los archivos JSON generados por [`youtube-analytics-data-service`](https://github.com/angelgarciachanga/youtube-analytics-data-service) directamente desde Cloud Storage, sin backend propio.
+Dashboard web estático que visualiza el rendimiento de un canal de YouTube en tiempo real. Consume los archivos JSON generados por [`youtube-analytics-data-service`](https://github.com/angelgarciadatablog/youtube-analytics-data-service) directamente desde Cloud Storage, sin backend propio.
 
 Desplegado en: **[angelgarciadatablog.com/youtube-insights-dashboard](https://angelgarciadatablog.com/youtube-insights-dashboard)**
 
@@ -9,16 +9,19 @@ Desplegado en: **[angelgarciadatablog.com/youtube-insights-dashboard](https://an
 ## Arquitectura del proyecto completo
 
 ```
-YouTube Data API v3
-        │
-        ▼
-youtube-v3-data-pipeline        ← ETL: extrae, transforma y carga en BigQuery
-        │
-        ▼
-youtube-analytics-data-service  ← Servicio: exporta BigQuery → JSON en Cloud Storage
-        │
-        ▼
-youtube-insights-dashboard      ← Este repo: consume los JSON y los visualiza
+youtube-v3-data-pipeline (ETL)
+    │
+    ▼
+BigQuery (dataset: angelgarciadatablog)
+    │
+    ▼
+Cloud Functions (youtube-analytics-daily + youtube-analytics-weekly)
+    │
+    ▼
+Cloud Storage: angelgarciadatablog-analytics (bucket público)
+    │
+    ├──▶ youtube-insights-dashboard (este repo: dashboard web estático en GitHub Pages)
+    └──▶ Power BI (consume JSON desde Cloud Storage)
 ```
 
 ---
