@@ -1,6 +1,6 @@
 # YouTube Insights Dashboard
 
-Dashboard web estático que visualiza el rendimiento de un canal de YouTube en tiempo real. Consume los archivos JSON generados por [`youtube-analytics-data-service`](https://github.com/angelgarciadatablog/youtube-analytics-data-service) directamente desde Cloud Storage, sin backend propio.
+Dashboard web estático que visualiza el rendimiento de un canal de YouTube en tiempo real. Consume los archivos JSON generados por [`youtube-analytics-data-service`](https://github.com/angelgarciadatablog/youtube-analytics-data-service) directamente desde Cloud Storage, sin backend propio. El acceso a los datos es restringido: el visitante inicia sesión con Google y el bucket valida su email vía IAM.
 
 Desplegado en: **[angelgarciadatablog.com/youtube-insights-dashboard](https://angelgarciadatablog.com/youtube-insights-dashboard)**
 
@@ -18,7 +18,7 @@ BigQuery (dataset: angelgarciadatablog)
 Cloud Functions (youtube-analytics-daily + youtube-analytics-weekly)
     │
     ▼
-Cloud Storage: angelgarciadatablog-analytics (bucket público)
+Cloud Storage: angelgarciadatablog-analytics (bucket privado — acceso por IAM)
     │
     ├──▶ youtube-insights-dashboard (este repo: dashboard web estático en GitHub Pages)
     └──▶ Power BI (consume JSON desde Cloud Storage)
@@ -81,7 +81,7 @@ Las preguntas concretas que guían el análisis:
 
 ### 1. Visión General del Canal (diaria)
 
-Datos actualizados cada día a las ~3:00 AM UTC.
+Datos actualizados cada día a las ~3:00 AM (hora Lima).
 
 - **KPI cards**: suscriptores totales, vistas totales, videos publicados y nuevas vistas del período
 - **Filtro de fechas**: selector libre + presets de 7D, 14D y 30D
@@ -112,7 +112,7 @@ Evolución semana a semana con toggle de métricas: Vistas · Likes · Comentari
 |---|---|
 | Lenguaje | HTML + CSS + JavaScript (vanilla) |
 | Gráficos | Chart.js v4.4 + chartjs-plugin-datalabels |
-| Datos | JSON públicos desde Cloud Storage (GCP) |
+| Datos | JSON desde Cloud Storage (GCP) — bucket privado, acceso vía Google Sign-In + IAM |
 | Despliegue | GitHub Pages |
 
 No hay framework, bundler ni dependencias de npm. Todo corre directamente en el navegador.
@@ -121,7 +121,7 @@ No hay framework, bundler ni dependencias de npm. Todo corre directamente en el 
 
 ## Fuentes de datos
 
-Los JSONs se consumen directamente desde el bucket público de Cloud Storage generado por `youtube-analytics-data-service`.
+Los JSONs se consumen directamente desde el bucket privado de Cloud Storage generado por `youtube-analytics-data-service`. Solo las cuentas de Google autorizadas en IAM pueden leerlos.
 
 | Sección | Archivo en Cloud Storage | Frecuencia |
 |---|---|---|
@@ -132,7 +132,7 @@ Los JSONs se consumen directamente desde el bucket público de Cloud Storage gen
 | Histórico videos | `weekly/view-video-weekly-evolution-relevant.json` | Semanal |
 | Videos por playlist | `weekly/view-all-playlist-videos-weekly.json` | Semanal |
 
-Los datos diarios se actualizan a las 3:00 AM UTC y los semanales los lunes a las 3:30 AM UTC.
+Los datos diarios se actualizan a las 3:00 AM y los semanales los lunes a las 3:30 AM (hora Lima, America/Lima).
 
 ---
 
@@ -159,7 +159,7 @@ python -m http.server 8080
 npx serve .
 ```
 
-Luego abrir `http://localhost:8080` en el navegador. Los datos se cargan directamente desde Cloud Storage.
+Luego abrir `http://localhost:8080` en el navegador e iniciar sesión con una cuenta autorizada (el origen `http://localhost:8080` está registrado en el OAuth Client ID).
 
 ---
 
