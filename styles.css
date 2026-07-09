@@ -1089,26 +1089,50 @@ a:hover { color: var(--text); }
 
 /* ============================================================
    AUTH OVERLAY — puerta de login (bucket privado)
+
+   Alineado con el diseño de angelgarciadatablog.com (acento azul).
+   Los tokens se declaran en el scope de .auth-overlay, no en :root:
+   el dashboard todavía usa la paleta morado/rosa v1 y está pendiente
+   de refactor. Toda regla de aquí debe quedar dentro de .auth-overlay.
    ============================================================ */
 .auth-overlay {
+  --auth-fondo: #0f0f0f;
+  --auth-superficie: #1a1a1a;
+  --auth-borde: #2a2a2a;
+  --auth-texto: #e8e8e8;
+  --auth-texto-suave: #888888;
+  --auth-texto-cuerpo: #b5b5b5;
+  --auth-acento: #2563eb;
+  --auth-acento-hover: #1d4ed8;
+
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: var(--bg);
+  background: var(--auth-fondo);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  font-family: 'Inter', Arial, sans-serif;
 }
 
 .auth-overlay.hidden {
   display: none;
 }
 
+/* El acento del blog es plano; anula el degradado morado/rosa de :root */
+.auth-overlay .gradient-text {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
+  color: var(--auth-acento);
+}
+
 .auth-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: var(--auth-superficie);
+  border: 1px solid var(--auth-borde);
+  border-radius: 12px;
   padding: 48px 40px;
   max-width: 420px;
   width: 100%;
@@ -1119,30 +1143,40 @@ a:hover { color: var(--text); }
   gap: 16px;
 }
 
+.auth-card .header-brand-parent {
+  color: var(--auth-texto-suave);
+  opacity: 1;
+}
+
 .auth-title {
   font-size: 28px;
-  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--auth-texto);
   margin: 0;
 }
 
 .auth-text {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--auth-texto-cuerpo);
   line-height: 1.6;
   margin: 0;
 }
 
 .auth-btn {
-  background: var(--gradient);
+  margin-top: 8px;
+  background-color: var(--auth-acento);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 12px 28px;
+  border-radius: 6px;
+  padding: 11px 24px;
   font-size: 15px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .auth-btn:hover {
-  background: var(--gradient-hover);
+  background-color: var(--auth-acento-hover);
 }
